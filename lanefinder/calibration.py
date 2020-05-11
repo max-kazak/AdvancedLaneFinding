@@ -77,7 +77,7 @@ def _calibrate(calib_img_path=paths.DIR_CAMERA_CAL, debug=False):
 
     if ret:
         if log.getEffectiveLevel() == logging.DEBUG and debug:
-            test_img_undist = cv2.undistort(test_img, mtx, dist, None, mtx)
+            test_img_undist = undistort(test_img, mtx, dist)
             cv2.imshow('distorted image', test_img)
             cv2.imshow('undistorted image', test_img_undist)
             cv2.waitKey()
@@ -118,9 +118,21 @@ def get_calibration(calib_img_path=paths.DIR_CAMERA_CAL, pickle_path=None):
     return mtx, dist
 
 
+def undistort(img, mtx, dist):
+    """
+    Applies undistortion to img.
+
+    :param img: distorted image
+    :param mtx: camera matrix
+    :param dist: distortion matrix
+    :return: undistorted image
+    """
+    return cv2.undistort(img, mtx, dist, None, mtx)
+
+
 def _test():
-    #_calibrate()
-    get_calibration(pickle_path='calibration.p')
+    _calibrate()
+    #get_calibration(pickle_path='calibration.p')
 
 
 if __name__ == '__main__':
