@@ -128,9 +128,8 @@ def undistort(img, mtx, dist):
     return cv2.undistort(img, mtx, dist, None, mtx)
 
 
-def _test():
-    _calibrate()
-    #get_calibration(pickle_path='calibration.p')
+def _main():
+    get_calibration(pickle_path='calibration.p')
 
 
 if __name__ == '__main__':
@@ -141,4 +140,4 @@ if __name__ == '__main__':
     log.addHandler(ch)
     log.setLevel(logging.DEBUG)
 
-    _test()
+    _main()
