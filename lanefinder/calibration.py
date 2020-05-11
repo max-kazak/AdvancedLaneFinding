@@ -44,7 +44,7 @@ def _find_chessboard_corners(img, nx=9, ny=6, debug=False):
     return None
 
 
-def _calibrate(calib_img_path=paths.DIR_CAMERA_CAL, debug=True):
+def _calibrate(calib_img_path=paths.DIR_CAMERA_CAL, debug=False):
     """
     Obrains calibration matrices.
 
