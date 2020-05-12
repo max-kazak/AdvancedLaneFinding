@@ -108,7 +108,7 @@ def combined_threshold(img, debug=False):
     """
     mag = grad_thresholding(img, thresh_mag=(50, 200), kernel_size=5)
     dir = grad_thresholding(img, thresh_dir=(np.pi/9, np.pi/3), kernel_size=9)
-    sat = color_thresholding(img, thresh_s=(80, 255))
+    sat = color_thresholding(img, thresh_s=(80, 150))
     hue = color_thresholding(img, thresh_h=(15, 100))
 
     mask = hue * sat + mag * dir
