@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 
 import paths
+import utils
 
 log = logging.getLogger("lanefinder.transform")
 
@@ -135,6 +136,14 @@ def calc_M(src, dst):
     return M, Minv
 
 
+def cut_roi(img, poligon_pts):
+    mask = np.zeros_like(img, dtype=np.uint8)
+    pts = np.array(poligon_pts, dtype=np.int32).reshape((-1, 1, 2))
+    ignore_mask_color = (255,) * img.shape[2]
+    cv2.fillPoly(mask, [pts], ignore_mask_color)
+    return cv2.bitwise_and(img, mask)
+
+
 def warpPerspective(img, M):
     """
     Apply perspective transformation M to img.
@@ -145,47 +154,28 @@ def warpPerspective(img, M):
     :return: warped image
     """
     img_size = (img.shape[1], img.shape[0])
-    warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_NEAREST)
+    warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     return warped
 
 
-def mask_to_3ch(mask, r=True, g=True, b=True):
-    """
-    Convert binary mask to 3 channel image. (for visualization purposes)
-
-    :param mask: binary 1-channel mask
-    :param r: fill red channel with 255 where mask==1
-    :param g: fill green channel with 255 where mask==1
-    :param b: fill blue channel with 255 where mask==1
-    :return: mask image in BGR format
-    """
-    mask_3ch = np.zeros((mask.shape[0], mask.shape[1], 3))
-    if b:
-        mask_3ch[:, :, 0] = mask * 255
-    if g:
-        mask_3ch[:, :, 1] = mask * 255
-    if r:
-        mask_3ch[:, :, 2] = mask * 255
-    return mask_3ch
-
-
-def _test_warping(img, debug=False):
+def _test_warping(img, debug=True):
     # define source and destination points for transform
-    src = np.float32([(570, 450),
-                      (740, 450),
-                      (1110, 670),
-                      (220, 670)])
-    dst = np.float32([(400, 50),
-                      (1280 - 400, 50),
-                      (1280 - 400, 720-10),
-                      (400, 720-10)])
+    src = [(570, 450),
+           (740, 450),
+           (1110, 670),
+           (220, 670)]
+    dst = [(400, 50),
+           (1280 - 400, 50),
+           (1280 - 400, 720-10),
+           (400, 720-10)]
 
-    M, Minv = calc_M(src, dst)
+    M, Minv = calc_M(np.float32(src), np.float32(dst))
 
-    img_warped = warpPerspective(img, M)
+    img_warped = cut_roi(img, src)
+    img_warped = warpPerspective(img_warped, M)
 
     if log.getEffectiveLevel() == logging.DEBUG and debug:
-        pts = src.reshape((-1, 1, 2)).astype(np.int32)
+        pts = np.array(src, dtype=np.int32).reshape((-1, 1, 2))
         img_roi = cv2.polylines(img, [pts], True, (0, 0, 255), 3)
         cv2.imshow('original_img', img_roi)
         cv2.imshow('warped', img_warped)
@@ -199,7 +189,7 @@ def _main():
     for filename in filenames:
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG, filename))
         mask = combined_threshold(img)
-        img_warped = _test_warping(mask_to_3ch(mask))
+        img_warped = _test_warping(utils.mask_to_3ch(mask))
         cv2.imwrite(os.path.join(paths.DIR_TEST_IMG_WARPED_LANES, filename), img_warped)
 
 
