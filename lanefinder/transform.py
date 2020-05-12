@@ -10,6 +10,17 @@ log = logging.getLogger("lanefinder.transform")
 
 
 def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None, thresh_dir=None, kernel_size=3):
+    """
+    Create image mask using gradient thresholding.
+
+    :param img: source bgr image
+    :param thresh_abs_x: tuple(min,max), threshold using absolute x gradient value (0, 255)
+    :param thresh_abs_y: tuple(min,max), threshold using absolute y gradient value (0, 255)
+    :param thresh_mag: tuple(min,max), threshold using gradient magnitude value (0, 255)
+    :param thresh_dir: tuple(min,max), threshold using gradient direction value (0, pi/2)
+    :param kernel_size: sobel kernel size, odd number
+    :return: binary mask of img size (1 channel)
+    """
     # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -57,6 +68,14 @@ def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None
 
 
 def color_thresholding(img, thresh_h=None, thresh_s=None):
+    """
+    Crete image mask using color thresholding.
+
+    :param img: source bgr image
+    :param thresh_h: tuple(min,max), hue threshold in HSL color space
+    :param thresh_s: tuple(min,max), saturation threshold in HSL color space
+    :return: binary mask of img size (1 channel)
+    """
     hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
 
     H = hls[:, :, 0]
@@ -79,6 +98,13 @@ def color_thresholding(img, thresh_h=None, thresh_s=None):
 
 
 def combined_threshold(img, debug=False):
+    """
+    Optimized combination of gradient and color masks to find lane lines on the road.
+
+    :param img: source bgr image
+    :param debug: show overlayed mask if log.getEffectiveLevel() == logging.DEBUG
+    :return: combined binary mask of img size (1 channel)
+    """
     mag = grad_thresholding(img, thresh_mag=(50, 200), kernel_size=5)
     dir = grad_thresholding(img, thresh_dir=(np.pi/9, np.pi/3), kernel_size=9)
     sat = color_thresholding(img, thresh_s=(80, 255))
@@ -97,18 +123,42 @@ def combined_threshold(img, debug=False):
 
 
 def calc_M(src, dst):
+    """
+    Claculate perspective transform matrix.
+
+    :param src: keypoints location on the source image.
+    :param dst: keypooints location on the warped image
+    :return: transform matrix M and inverse matrix Minv
+    """
     M = cv2.getPerspectiveTransform(src, dst)
     Minv = Minv = cv2.getPerspectiveTransform(dst, src)
     return M, Minv
 
 
 def warpPerspective(img, M):
+    """
+    Apply perspective transformation M to img.
+    Note: replace M with Minv to unwarp image back.
+
+    :param img: source image
+    :param M: transformation matrix
+    :return: warped image
+    """
     img_size = (img.shape[1], img.shape[0])
-    warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
+    warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_NEAREST)
     return warped
 
 
 def mask_to_3ch(mask, r=True, g=True, b=True):
+    """
+    Convert binary mask to 3 channel image. (for visualization purposes)
+
+    :param mask: binary 1-channel mask
+    :param r: fill red channel with 255 where mask==1
+    :param g: fill green channel with 255 where mask==1
+    :param b: fill blue channel with 255 where mask==1
+    :return: mask image in BGR format
+    """
     mask_3ch = np.zeros((mask.shape[0], mask.shape[1], 3))
     if b:
         mask_3ch[:, :, 0] = mask * 255
@@ -119,27 +169,29 @@ def mask_to_3ch(mask, r=True, g=True, b=True):
     return mask_3ch
 
 
-def _test_warping(img):
+def _test_warping(img, debug=False):
     # define source and destination points for transform
     src = np.float32([(570, 450),
                       (740, 450),
                       (1110, 670),
                       (220, 670)])
-    dst = np.float32([(250, 50),
-                      (1280 - 250, 50),
-                      (1280 - 250, 720-10),
-                      (250, 720-10)])
+    dst = np.float32([(400, 50),
+                      (1280 - 400, 50),
+                      (1280 - 400, 720-10),
+                      (400, 720-10)])
 
     M, Minv = calc_M(src, dst)
 
     img_warped = warpPerspective(img, M)
 
-    if log.getEffectiveLevel() == logging.DEBUG:
+    if log.getEffectiveLevel() == logging.DEBUG and debug:
         pts = src.reshape((-1, 1, 2)).astype(np.int32)
         img_roi = cv2.polylines(img, [pts], True, (0, 0, 255), 3)
         cv2.imshow('original_img', img_roi)
         cv2.imshow('warped', img_warped)
         cv2.waitKey()
+
+    return img_warped
 
 
 def _main():
@@ -147,7 +199,8 @@ def _main():
     for filename in filenames:
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG, filename))
         mask = combined_threshold(img)
-        _test_warping(img)
+        img_warped = _test_warping(mask_to_3ch(mask))
+        cv2.imwrite(os.path.join(paths.DIR_TEST_IMG_WARPED_LANES, filename), img_warped)
 
 
 if __name__ == '__main__':
