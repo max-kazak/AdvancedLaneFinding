@@ -9,16 +9,18 @@ import utils
 
 log = logging.getLogger("lanefinder.transform")
 
-
-WARP_SRC_PTS = [(570, 450),
-                (740, 450),
-                (1110, 670),
-                (220, 670)]
-WARP_DST_PTS = [(400, 50),
-                (1280 - 400, 50),
-                (1280 - 400, 720-10),
-                (400, 720-10)]
-YM_PER_PX = 3 / 98
+_src_top_mar = 550
+_scr_bottom_mar = 170
+_dst_hor_mar = 400
+WARP_SRC_PTS = [(_src_top_mar, 450),
+                (1280 - _src_top_mar, 450),
+                (1280 - _scr_bottom_mar, 690),
+                (_scr_bottom_mar, 690)]
+WARP_DST_PTS = [(_dst_hor_mar, 50),
+                (1280 - _dst_hor_mar, 50),
+                (1280 - _dst_hor_mar, 720-10),
+                (_dst_hor_mar, 720-10)]
+YM_PER_PX = 3 / 115
 XM_PER_PX = 3.7 / 400
 
 def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None, thresh_dir=None, kernel_size=3):
