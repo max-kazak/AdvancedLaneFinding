@@ -10,6 +10,17 @@ import utils
 log = logging.getLogger("lanefinder.transform")
 
 
+WARP_SRC_PTS = [(570, 450),
+                (740, 450),
+                (1110, 670),
+                (220, 670)]
+WARP_DST_PTS = [(400, 50),
+                (1280 - 400, 50),
+                (1280 - 400, 720-10),
+                (400, 720-10)]
+YM_PER_PX = 3 / 98
+XM_PER_PX = 3.7 / 400
+
 def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None, thresh_dir=None, kernel_size=3):
     """
     Create image mask using gradient thresholding.
@@ -160,14 +171,8 @@ def warpPerspective(img, M):
 
 def _test_warping(img, debug=True):
     # define source and destination points for transform
-    src = [(570, 450),
-           (740, 450),
-           (1110, 670),
-           (220, 670)]
-    dst = [(400, 50),
-           (1280 - 400, 50),
-           (1280 - 400, 720-10),
-           (400, 720-10)]
+    src = WARP_SRC_PTS
+    dst = WARP_DST_PTS
 
     M, Minv = calc_M(np.float32(src), np.float32(dst))
 
@@ -190,6 +195,7 @@ def _main():
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG, filename))
         mask = combined_threshold(img)
         img_warped = _test_warping(utils.mask_to_3ch(mask))
+        # img_warped = _test_warping(img)
         cv2.imwrite(os.path.join(paths.DIR_TEST_IMG_WARPED_LANES, filename), img_warped)
 
 

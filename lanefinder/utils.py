@@ -46,3 +46,14 @@ def mask_to_3ch(mask, r=True, g=True, b=True):
     if r:
         mask_3ch[:, :, 2] = mask * 255
     return mask_3ch
+
+
+def polyval(fit, arg):
+    """
+    Calculate polynomial value at arg. x=f(y)
+
+    :param fit: polynomial parameters
+    :param arg: numerical or array of y values
+    :return: x
+    """
+    return fit[0]*arg**2 + fit[1]*arg + fit[2]

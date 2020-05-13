@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 import paths
 import utils
+from transform import YM_PER_PX, XM_PER_PX
 
 log = logging.getLogger("lanefinder.detect")
 
@@ -40,7 +41,7 @@ def _find_lane_loc_hist(binary_warped, window_h=None, debug=True):
     return leftx_base, rightx_base
 
 
-def _segment_llines_noprior(binary_warped, nwindows=9, margin=100, minpix=100, debug=True):
+def _segment_llines_noprior(binary_warped, nwindows=9, margin=50, minpix=100, debug=True):
     """
     Find pixels that belong to lane lines.
 
@@ -126,7 +127,8 @@ def _segment_llines_noprior(binary_warped, nwindows=9, margin=100, minpix=100, d
     return leftx, lefty, rightx, righty
 
 
-def _segment_llines_prior(binary_warped, left_fit, right_fit, margin=100, debug=True):
+def _segment_llines_prior(binary_warped, prior, margin=50, debug=True):
+    left_fit, right_fit = prior
     # Grab activated pixels
     nonzero = binary_warped.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -189,21 +191,23 @@ def _fit_polynomial(leftx, lefty, rightx, righty):
     return left_fit, right_fit
 
 
-def detect_llines(binary_warped, prior=None, debug=True):
+def detect_llines(binary_warped, prior=None, margin=50, debug=True):
     if prior is None:
-        leftx, lefty, rightx, righty = _segment_llines_noprior(binary_warped)
+        leftx, lefty, rightx, righty = _segment_llines_noprior(binary_warped, margin=margin)
     else:
-        leftx, lefty, rightx, righty = _segment_llines_prior(binary_warped, left_fit=prior[0], right_fit=prior[1])
+        leftx, lefty, rightx, righty = _segment_llines_prior(binary_warped,
+                                                             prior,
+                                                             margin=margin)
 
     left_fit, right_fit = _fit_polynomial(leftx, lefty, rightx, righty)
 
     if log.getEffectiveLevel() == logging.DEBUG and debug:
         out_img = utils.mask_to_3ch(binary_warped)
         # Generate x and y values for plotting
-        ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
+        ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
         try:
-            left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-            right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+            left_fitx = utils.polyval(left_fit, ploty)
+            right_fitx = utils.polyval(right_fit, ploty)
         except TypeError:
             # Avoids an error if `left` and `right_fit` are still none or incorrect
             print('The function failed to fit a line!')
@@ -227,6 +231,34 @@ def detect_llines(binary_warped, prior=None, debug=True):
     return left_fit, right_fit
 
 
+def calc_curv_offset(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
+    left_fit, right_fit = lane_fit
+
+    left_bottom_x = utils.polyval(left_fit, img_shape[1]-1)
+    right_bottom_x = utils.polyval(right_fit, img_shape[1]-1)
+
+    offset_px = left_bottom_x + (right_bottom_x - left_bottom_x) // 2 - img_shape[0] // 2
+    offset_m = offset_px * xm_per_px
+
+    y_eval_m = img_shape[1] * ym_per_px
+
+    # x = Ay^2 + By + C
+    leftA = left_fit[0] * xm_per_px / ym_per_px ** 2
+    leftB = left_fit[1] * xm_per_px / ym_per_px
+    rightA = right_fit[0] * xm_per_px / ym_per_px ** 2
+    rightB = right_fit[1] * xm_per_px / ym_per_px
+
+    left_curverad_m = ((1 + (2 * leftA * y_eval_m + leftB) ** 2) ** 1.5) / np.absolute(2 * leftA)
+    right_curverad_m = ((1 + (2 * rightA * y_eval_m + rightB) ** 2) ** 1.5) / np.absolute(2 * rightA)
+
+    lane_curve_m = (left_curverad_m + right_curverad_m) / 2
+
+    log.info("lane curvature = {}m and car position off center = {}m".format(int(round(lane_curve_m)),
+                                                                             round(offset_m, 2)))
+
+    return lane_curve_m, offset_m
+
+
 def _main():
     filenames = os.listdir(paths.DIR_TEST_IMG_WARPED_LANES)
     lane_fit = None
@@ -234,8 +266,10 @@ def _main():
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG_WARPED_LANES, filename))
         mask = np.zeros((img.shape[0], img.shape[1]))
         mask[img[:, :, 0] > 0] = 1
+        lane_fit = None  # comment out if want to test prior segmentation
+        lane_fit = detect_llines(mask, lane_fit)
+        calc_curv_offset(lane_fit)
 
-        detect_llines(mask, lane_fit)
 
 
 if __name__ == '__main__':
