@@ -49,7 +49,7 @@ def _segment_llines_noprior(binary_warped, nwindows=9, margin=50, minpix=100, de
     :param nwindows: number of iterating windows
     :param margin: window width
     :param minpix: min number of pixels found to recenter window
-    :return:
+    :return: leftx, lefty, rightx, righty - pixel coordinates of the left and right lanes
     """
     # find initial rough positions of the bottom lines using histogram
     leftx_base, rightx_base = _find_lane_loc_hist(binary_warped)
@@ -128,6 +128,14 @@ def _segment_llines_noprior(binary_warped, nwindows=9, margin=50, minpix=100, de
 
 
 def _segment_llines_prior(binary_warped, prior, margin=50, debug=True):
+    """
+    Find pixels that belong to lane lines given prior location of the lane lines.
+
+    :param binary_warped: binary mask of lane lines from top perspective
+    :param prior: (left_fit, right_fit) fitted polynomials of the left and right lane lines of the prior estimation
+    :param margin: defines width of the area where new line pixels will be searched
+    :return: leftx, lefty, rightx, righty - pixel coordinates of the left and right lanes
+    """
     left_fit, right_fit = prior
     # Grab activated pixels
     nonzero = binary_warped.nonzero()
@@ -184,6 +192,14 @@ def _segment_llines_prior(binary_warped, prior, margin=50, debug=True):
 
 
 def _fit_polynomial(leftx, lefty, rightx, righty):
+    """
+    Fit x = Ay^2 + By + C to lane lines' pixels.
+    :param leftx: x coordinates of the left line pixels
+    :param lefty: y coordinates of the left line pixels
+    :param rightx: x coordinates of the right line pixels
+    :param righty: y coordinates of the right line pixels
+    :return: left_fit, right_fit - fitted A,B,C parameters for both lane lines
+    """
     # Fit a second order polynomial to each using `np.polyfit`
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
@@ -192,6 +208,15 @@ def _fit_polynomial(leftx, lefty, rightx, righty):
 
 
 def detect_llines(binary_warped, prior=None, margin=50, debug=True):
+    """
+    Detect lane lines.
+    Uses window-based detection if prior is None.
+
+    :param binary_warped: binary mask of lane lines from top perspective
+    :param prior: (left_fit, right_fit) fitted polynomials of the left and right lane lines of the prior estimation
+    :param margin: width of the area where to search to line pixels around probable location
+    :return: left_fit, right_fit - fitted A,B,C parameters for both lane lines equation x=Ay^2+By+C
+    """
     if prior is None:
         leftx, lefty, rightx, righty = _segment_llines_noprior(binary_warped, margin=margin)
     else:
@@ -232,6 +257,15 @@ def detect_llines(binary_warped, prior=None, margin=50, debug=True):
 
 
 def calc_curv_offset(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
+    """
+    Calculates curvature and vehicle offset from the center of the lane in meters.
+
+    :param lane_fit: tuple(left_fit, right_fit) - parameters of the polynomial equation describing lane lines
+    :param ym_per_px: m/px coefficient for y direction
+    :param xm_per_px: m/px coefficient for x direction
+    :param img_shape: shape of the top-view image where line equations where fitted
+    :return:
+    """
     left_fit, right_fit = lane_fit
 
     left_bottom_x = utils.polyval(left_fit, img_shape[1]-1)
