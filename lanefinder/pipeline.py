@@ -255,7 +255,7 @@ def _main():
 if __name__ == '__main__':
     # logging setup
     ch = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)20s | %(message)s')
     ch.setFormatter(formatter)
     logging.getLogger('lanefinder').addHandler(ch)
     log.setLevel(logging.DEBUG)
