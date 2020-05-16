@@ -12,6 +12,21 @@ from transform import YM_PER_PX, XM_PER_PX
 log = logging.getLogger("lanefinder.detect")
 
 
+class Lane:
+
+    def __init__(self, lane_fit):
+        self.lane_fit = lane_fit
+        self.curvature = calc_curv(lane_fit)
+        self.offset = calc_offset(lane_fit)
+
+    def __str__(self):
+        return "Lane: left_curv({lcurv}m), right_curv({rcurv}m), offset({offset}m)".format(
+            lcurv=int(round(self.curvature[0])),
+            rcurv=int(round(self.curvature[1])),
+            offset=round(self.offset, 2)
+        )
+
+
 def _find_lane_loc_hist(binary_warped, window_h=None, debug=True):
     """
     Find initial location of the lane lines on the bottom part of the image.
