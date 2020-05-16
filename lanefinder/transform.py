@@ -145,16 +145,23 @@ def calc_M(src, dst):
     :return: transform matrix M and inverse matrix Minv
     """
     M = cv2.getPerspectiveTransform(src, dst)
-    Minv = Minv = cv2.getPerspectiveTransform(dst, src)
+    Minv = cv2.getPerspectiveTransform(dst, src)
     return M, Minv
 
 
 def cut_roi(img, poligon_pts):
+    is_binary = False
+    if len(img.shape) == 2:
+        is_binary = True
+        img = img.reshape((img.shape[0], img.shape[1], 1))
     mask = np.zeros_like(img, dtype=np.uint8)
     pts = np.array(poligon_pts, dtype=np.int32).reshape((-1, 1, 2))
     ignore_mask_color = (255,) * img.shape[2]
     cv2.fillPoly(mask, [pts], ignore_mask_color)
-    return cv2.bitwise_and(img, mask)
+    cut = cv2.bitwise_and(img, mask)
+    if is_binary:
+        cut = cut.reshape((img.shape[0], img.shape[1]))
+    return cut
 
 
 def warpPerspective(img, M):
