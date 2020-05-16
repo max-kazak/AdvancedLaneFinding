@@ -267,7 +267,7 @@ def plot_fitted_lane(binary_warped, lane_fit, line_seg=None):
     return plt_img
 
 
-def calc_curv_offset(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
+def calc_curv(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
     """
     Calculates curvature of the fitted lane in meters.
 
