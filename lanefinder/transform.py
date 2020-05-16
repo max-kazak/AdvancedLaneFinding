@@ -24,6 +24,7 @@ WARP_DST_PTS = [(_dst_top_mar, 0),
 YM_PER_PX = 3 / 86
 XM_PER_PX = 3.7 / 243
 
+
 def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None, thresh_dir=None, kernel_size=3):
     """
     Create image mask using gradient thresholding.
@@ -190,8 +191,9 @@ def _test_warping(img, debug=True):
     img_warped = warpPerspective(img_warped, M)
 
     if log.getEffectiveLevel() == logging.DEBUG and debug:
+        img_roi = img.copy()
         pts = np.array(src, dtype=np.int32).reshape((-1, 1, 2))
-        img_roi = cv2.polylines(img, [pts], True, (0, 0, 255), 3)
+        cv2.polylines(img_roi, [pts], True, (0, 0, 255), 3)
         cv2.imshow('original_img', img_roi)
         cv2.imshow('warped', img_warped)
         cv2.waitKey()
