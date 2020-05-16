@@ -269,21 +269,15 @@ def plot_fitted_lane(binary_warped, lane_fit, line_seg=None):
 
 def calc_curv_offset(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
     """
-    Calculates curvature and vehicle offset from the center of the lane in meters.
+    Calculates curvature of the fitted lane in meters.
 
     :param lane_fit: tuple(left_fit, right_fit) - parameters of the polynomial equation describing lane lines
     :param ym_per_px: m/px coefficient for y direction
     :param xm_per_px: m/px coefficient for x direction
     :param img_shape: shape of the top-view image where line equations where fitted
-    :return:
+    :return: left line curvature, right line curvature in meters
     """
     left_fit, right_fit = lane_fit
-
-    left_bottom_x = utils.polyval(left_fit, img_shape[1]-1)
-    right_bottom_x = utils.polyval(right_fit, img_shape[1]-1)
-
-    offset_px = left_bottom_x + (right_bottom_x - left_bottom_x) // 2 - img_shape[0] // 2
-    offset_m = offset_px * xm_per_px
 
     y_eval_m = img_shape[1] * ym_per_px
 
@@ -298,10 +292,31 @@ def calc_curv_offset(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_sha
 
     lane_curve_m = (left_curverad_m + right_curverad_m) / 2
 
-    log.info("lane curvature = {}m and car position off center = {}m".format(int(round(lane_curve_m)),
-                                                                             round(offset_m, 2)))
+    log.info("lane curvature = {}m".format(int(round(lane_curve_m))))
 
-    return lane_curve_m, offset_m
+    return left_curverad_m, right_curverad_m
+
+
+def calc_offset(lane_fit, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
+    """
+    Calculates vehicle offset from the center of the lane in meters.
+
+    :param lane_fit: tuple(left_fit, right_fit) - parameters of the polynomial equation describing lane lines
+    :param xm_per_px: m/px coefficient for x direction
+    :param img_shape: shape of the top-view image where line equations where fitted
+    :return: offset value in meters (<0 to the left, >0 to the right)
+    """
+    left_fit, right_fit = lane_fit
+
+    left_bottom_x = utils.polyval(left_fit, img_shape[1]-1)
+    right_bottom_x = utils.polyval(right_fit, img_shape[1]-1)
+
+    offset_px = left_bottom_x + (right_bottom_x - left_bottom_x) // 2 - img_shape[0] // 2
+    offset_m = offset_px * xm_per_px
+
+    log.info("car position off center = {}m".format(round(offset_m, 2)))
+
+    return offset_m
 
 
 def _main():
@@ -313,8 +328,6 @@ def _main():
         mask[img[:, :, 0] > 0] = 1
         lane_fit = None  # comment out if want to test prior segmentation
         lane_fit, line_seg = detect_llines(mask, lane_fit)
-        calc_curv_offset(lane_fit)
-
 
 
 if __name__ == '__main__':
