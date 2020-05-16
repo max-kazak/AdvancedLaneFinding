@@ -176,17 +176,42 @@ class DisplayLaneFitNode(PipeNode):
         return vis_img
 
 
+class CalcCurvatureNode(PipeNode):
+
+    def __init__(self, lane_fit_input, output):
+        self.input = lane_fit_input
+        self.output = output
+
+    def _action(self, context):
+        lane_fit = context.get(self.input)
+        if lane_fit is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
+
+        curvature = detect.calc_curv(lane_fit)
+
+        context[self.output] = curvature
+        return curvature
+
+
 def create_image_pipeline():
     return PipeLine([
-        OverlayRoiNode(input='img', output='img_roi'),
-        CalibrationNode(input='img', output='img'),
-        ThresholdingNode(input='img', output='binary'),
-        CuttingNode(input='binary', output='binary'),
-        TopPerspectiveNode(input='binary', output='binary_warped'),
+        OverlayRoiNode(input='img',
+                       output='img_roi'),
+        CalibrationNode(input='img',
+                        output='img'),
+        ThresholdingNode(input='img',
+                         output='binary'),
+        CuttingNode(input='binary',
+                    output='binary'),
+        TopPerspectiveNode(input='binary',
+                           output='binary_warped'),
         LaneDetectionNode(binary_input='binary_warped', prior=None,
                           lane_fit_output='lane_fit', line_seg_output='line_seg'),
         DisplayLaneFitNode(binary_input='binary_warped', lane_fit_input='lane_fit', line_seg_input='line_seg',
-                           vis_output='fitted_lane_img')
+                           vis_output='fitted_lane_img'),
+        CalcCurvatureNode(lane_fit_input='lane_fit',
+                          output='curvature')
+
     ])
 
 
@@ -197,13 +222,15 @@ def _main():
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG, filename))
         context = {'img': img}
         final_res = pipeline.passthrough(context)
-        cv2.imshow("input image", context['img_roi'])
         if isinstance(final_res, np.ndarray):
             if len(final_res.shape) == 2:
                 final_res = utils.mask_to_3ch(final_res)
             cv2.imshow("pipe result", final_res)
         else:
             print(final_res)
+
+        cv2.imshow("input image", context['img_roi'])
+        cv2.imshow("fitted lane", context['fitted_lane_img'])
         cv2.waitKey()
 
 
