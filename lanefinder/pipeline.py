@@ -193,6 +193,23 @@ class CalcCurvatureNode(PipeNode):
         return curvature
 
 
+class CalcOffsetNode(PipeNode):
+
+    def __init__(self, lane_fit_input, output):
+        self.input = lane_fit_input
+        self.output = output
+
+    def _action(self, context):
+        lane_fit = context.get(self.input)
+        if lane_fit is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
+
+        offset = detect.calc_offset(lane_fit)
+
+        context[self.output] = offset
+        return offset
+
+
 def create_image_pipeline():
     return PipeLine([
         OverlayRoiNode(input='img',
@@ -210,8 +227,9 @@ def create_image_pipeline():
         DisplayLaneFitNode(binary_input='binary_warped', lane_fit_input='lane_fit', line_seg_input='line_seg',
                            vis_output='fitted_lane_img'),
         CalcCurvatureNode(lane_fit_input='lane_fit',
-                          output='curvature')
-
+                          output='curvature'),
+        CalcOffsetNode(lane_fit_input='lane_fit',
+                       output='offset')
     ])
 
 
