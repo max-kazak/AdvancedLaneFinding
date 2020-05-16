@@ -137,7 +137,7 @@ if __name__ == '__main__':
     ch = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s')
     ch.setFormatter(formatter)
-    log.addHandler(ch)
+    logging.getLogger('lanefinder').addHandler(ch)
     log.setLevel(logging.DEBUG)
 
     _main()
