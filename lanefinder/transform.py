@@ -83,7 +83,7 @@ def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None
     return binary_combined.astype(np.uint8)
 
 
-def color_thresholding(img, thresh_h=None, thresh_s=None):
+def color_thresholding(img, thresh_h=None, thresh_s=None, thresh_l=None):
     """
     Crete image mask using color thresholding.
 
@@ -110,6 +110,11 @@ def color_thresholding(img, thresh_h=None, thresh_s=None):
         binary[(H > thresh_h[0]) & (H <= thresh_h[1])] = 1
         binary_combined = binary_combined * binary
 
+    if thresh_l is not None:
+        binary = np.zeros_like(L)
+        binary[(L > thresh_l[0]) & (L <= thresh_l[1])] = 1
+        binary_combined = binary_combined * binary
+
     return binary_combined
 
 
@@ -123,10 +128,11 @@ def combined_threshold(img, debug=False):
     """
     mag = grad_thresholding(img, thresh_mag=(50, 200), kernel_size=5)
     dir = grad_thresholding(img, thresh_dir=(np.pi/9, np.pi/3), kernel_size=9)
-    sat = color_thresholding(img, thresh_s=(80, 150))
-    hue = color_thresholding(img, thresh_h=(15, 100))
+    sat = color_thresholding(img, thresh_s=(100, 255))
+    hue = color_thresholding(img, thresh_h=(15, 50))
+    # lum = color_thresholding(img, thresh_l=(200, 220))
 
-    mask = hue * sat + mag * dir
+    mask = sat * hue + mag * dir
 
     if log.getEffectiveLevel() == logging.DEBUG and debug:
         mask_3ch = np.zeros_like(img)
