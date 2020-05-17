@@ -72,6 +72,25 @@ class ThresholdingNode(PipeNode):
         return img_thresh
 
 
+class GrayThresholdingNode(PipeNode):
+
+    def __init__(self, gray_input, output, thresh):
+        self.input = gray_input
+        self.output = output
+        self.thresh = thresh
+
+    def _action(self, context):
+        img = context.get(self.input)
+        if img is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
+
+        img_thresh = np.zeros_like(img, dtype=np.uint8)
+        img_thresh[img > self.thresh] = 1
+
+        context[self.output] = img_thresh
+        return img_thresh
+
+
 class CuttingNode(PipeNode):
     
     def __init__(self, input, output):
@@ -107,23 +126,51 @@ class OverlayRoiNode(PipeNode):
         return img
 
 
-class TopPerspectiveNode(PipeNode):
+class OverlayImagesNode(PipeNode):
 
-    def __init__(self, input, output, inv=False):
+    def __init__(self, bckgrnd_input, overlay_input, output, alpha=0.5):
+        self.input1 = bckgrnd_input
+        self.input2 = overlay_input
+        self.alpha = alpha
+        self.output = output
+
+    def _action(self, context):
+        img1 = context.get(self.input1)
+        if img1 is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.input1))
+        img2 = context.get(self.input2)
+        if img2 is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.input2))
+
+        out_img = cv2.addWeighted(img1, 1, img2, self.alpha, 0)
+
+        context[self.output] = out_img
+        return out_img
+
+
+class PerspectiveNode(PipeNode):
+
+    def __init__(self, input, output, inv=False, dtype=None):
         self.input = input
         self.output = output
         self.inv = inv
         self.M, self.Minv = transform.calc_M(src=np.float32(transform.WARP_SRC_PTS),
                                              dst=np.float32(transform.WARP_DST_PTS))
+        self.dtype = dtype
 
     def _action(self, context):
         img = context.get(self.input)
+
+        if self.dtype is not None:
+            img = img.astype(self.dtype)
+
         if img is None:
             raise exceptions.PipeException("missing context parameter: {}".format(self.input))
         if not self.inv:
             warped = transform.warpPerspective(img, self.M)
         else:
             warped = transform.warpPerspective(img, self.Minv)
+
         context[self.output] = warped
 
         return warped
@@ -150,51 +197,73 @@ class LaneDetectionNode(PipeNode):
         return lane
 
 
-class DisplayLaneFitNode(PipeNode):
+class DrawLaneNode(PipeNode):
 
-    def __init__(self, lane_input, output):
+    def __init__(self, lane_input, output, mode='fit'):
+        """
+
+        :param lane_input:
+        :param output:
+        :param mode: "fit" - draw fitted lines, "area" - draw lane area
+        """
         self.input = lane_input
         self.output = output
+        self.mode = mode
 
     def _action(self, context):
         lane = context.get(self.input)
         if lane is None:
             raise exceptions.PipeException("missing context parameter: {}".format(self.input))
 
-        vis_img = lane.plot_fitted_lane()
+        if self.mode == 'fit':
+            vis_img = lane.plot_fitted_lane()
+        elif self.mode == 'area':
+            vis_img = lane.draw_lane()
+        else:
+            raise exceptions.PipeException("unsupported mode argument in DrawLaneNode: {}".format(self.mode))
 
         context[self.output] = vis_img
 
         return vis_img
 
 
-def create_image_pipeline():
-    return PipeLine('Image processing',
+def _create_lane_perception_pipeline():
+    return PipeLine('Lane perception',
         [
-            OverlayRoiNode(input='img',
-                           output='img_roi'),
             CalibrationNode(input='img',
                             output='img'),
+            OverlayRoiNode(input='img',
+                           output='img_roi'),
             ThresholdingNode(input='img',
                              output='binary'),
             CuttingNode(input='binary',
                         output='binary'),
-            TopPerspectiveNode(input='binary',
-                               output='binary_warped'),
+            PerspectiveNode(input='binary', dtype=np.float32,
+                            output='binary_warped'),
+            GrayThresholdingNode(gray_input='binary_warped', thresh=0.8,
+                                 output='binary_warped'),
             LaneDetectionNode(binary_input='binary_warped', prior_lane_input=None,
                               output='lane'),
-            DisplayLaneFitNode(lane_input='lane',
-                               output='fitted_lane_img')
+            DrawLaneNode(lane_input='lane', mode='fit',
+                         output='fitted_lane_img'),
+            DrawLaneNode(lane_input='lane', mode='area',
+                         output='lane_img'),
+            PerspectiveNode(input='lane_img', inv=True,
+                            output='lane_img'),
+            OverlayImagesNode(bckgrnd_input='img', overlay_input='lane_img',
+                              output='lane_ar')
         ])
 
 
 def _main():
-    pipeline = create_image_pipeline()
+    pipeline1 = _create_lane_perception_pipeline()
     filenames = os.listdir(paths.DIR_TEST_IMG)
     for filename in filenames:
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG, filename))
         context = {'img': img}
-        final_res = pipeline.passthrough(context)
+
+        final_res = pipeline1.passthrough(context)
+
         if isinstance(final_res, np.ndarray):
             if len(final_res.shape) == 2:
                 final_res = utils.mask_to_3ch(final_res)
@@ -203,7 +272,7 @@ def _main():
             print(final_res)
 
         cv2.imshow("input image", context['img_roi'])
-        cv2.imshow("fitted lane", context['fitted_lane_img'])
+        # cv2.imshow("fitted lane", context['fitted_lane_img'])
         cv2.waitKey()
 
 

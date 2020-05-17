@@ -59,6 +59,37 @@ class Lane:
 
         return plt_img
 
+    def draw_lane(self):
+        left_fit, right_fit = self.lane_fit
+
+        w, h = self.img_shape
+        lane_img = np.zeros((h, w, 3), dtype=np.uint8)
+
+        ploty = np.linspace(0, h - 1, num=h)  # to cover same y-range as image
+        left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+
+        # Recast the x and y points into usable format for cv2.fillPoly()
+        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+        pts = np.hstack((pts_left, pts_right))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(lane_img, np.int_([pts]), (0, 255, 0))
+
+        cv2.polylines(lane_img, np.int32([pts_left]), isClosed=False, color=(255, 0, 0), thickness=8)
+        cv2.polylines(lane_img, np.int32([pts_right]), isClosed=False, color=(0, 0, 255), thickness=8)
+
+        # # Draw lane line points
+        # if self.line_seg is not None:
+        #     leftx, lefty, rightx, righty = self.line_seg
+        #     # Colors in the left and right lane regions
+        #     lane_img[lefty, leftx] = [255, 0, 0]
+        #     lane_img[righty, rightx] = [0, 0, 255]
+
+        return lane_img
+
+
     def get_curv(self):
         if self.curvature is None:
             left_fit, right_fit = self.lane_fit
