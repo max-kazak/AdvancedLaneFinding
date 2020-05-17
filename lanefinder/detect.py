@@ -71,12 +71,15 @@ class Lane:
             rightA = right_fit[0] * self.xm_per_px / self.ym_per_px ** 2
             rightB = right_fit[1] * self.xm_per_px / self.ym_per_px
 
-            left_curverad_m = ((1 + (2 * leftA * y_eval_m + leftB) ** 2) ** 1.5) / np.absolute(2 * leftA)
-            right_curverad_m = ((1 + (2 * rightA * y_eval_m + rightB) ** 2) ** 1.5) / np.absolute(2 * rightA)
+            left_curverad_m = ((1 + (2 * leftA * y_eval_m + leftB) ** 2) ** 1.5) / (2 * leftA)
+            right_curverad_m = ((1 + (2 * rightA * y_eval_m + rightB) ** 2) ** 1.5) / (2 * rightA)
 
             lane_curve_m = (left_curverad_m + right_curverad_m) / 2
 
-            log.info("lane curvature = {}m".format(int(round(lane_curve_m))))
+            log.info("curvatures: left_line={}m, right_line={}m, lane={}m".format(
+                int(round(left_curverad_m)),
+                int(round(right_curverad_m)),
+                int(round(lane_curve_m))))
 
             self.curvature = left_curverad_m, right_curverad_m
 
