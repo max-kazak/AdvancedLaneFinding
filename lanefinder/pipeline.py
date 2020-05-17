@@ -16,11 +16,12 @@ log = logging.getLogger("lanefinder.pipeline")
 
 class PipeLine:
 
-    def __init__(self, nodes):
+    def __init__(self, name, nodes):
+        self.name = name
         self.nodes = nodes
 
     def passthrough(self, context):
-        log.info("Pipelining:")
+        log.info("Running {} Pipeline::".format(self.name))
         last_result = None
         for node in self.nodes:
             last_result = node.process(context)
@@ -130,120 +131,61 @@ class TopPerspectiveNode(PipeNode):
 
 class LaneDetectionNode(PipeNode):
 
-    def __init__(self, binary_input, lane_fit_output, line_seg_output=None, prior=None):
+    def __init__(self, binary_input, prior_lane_input=None, output=None):
         self.input = binary_input
-        self.lane_output = lane_fit_output
-        self.line_seg_output = line_seg_output
-        self.prior = prior
+        self.prior_lane_input = prior_lane_input
+        self.output = output
 
     def _action(self, context):
         binary_img = context.get(self.input)
         if binary_img is None:
             raise exceptions.PipeException("missing context parameter: {}".format(self.input))
 
-        prior = context.get(self.prior) if self.prior is not None else None
+        prior_lane = context.get(self.prior_lane_input) if self.prior_lane_input is not None else None
 
-        lane_fit, line_seg = detect.detect_llines(binary_img, prior)
+        lane = detect.detect_llines(binary_img, prior_lane)
 
-        context[self.lane_output] = lane_fit
-        if self.line_seg_output is not None:
-            context[self.line_seg_output] = line_seg
+        context[self.output] = lane
 
-        return lane_fit
+        return lane
 
 
 class DisplayLaneFitNode(PipeNode):
 
-    def __init__(self, binary_input, lane_fit_input, line_seg_input, vis_output):
-        self.input = binary_input
-        self.lane_fit_input = lane_fit_input
-        self.line_seg_input = line_seg_input
-        self.output = vis_output
+    def __init__(self, lane_input, output):
+        self.input = lane_input
+        self.output = output
 
     def _action(self, context):
-        binary_img = context.get(self.input)
-        if binary_img is None:
+        lane = context.get(self.input)
+        if lane is None:
             raise exceptions.PipeException("missing context parameter: {}".format(self.input))
-        lane_fit = context.get(self.lane_fit_input)
-        if lane_fit is None:
-            raise exceptions.PipeException("missing context parameter: {}".format(self.lane_fit_input))
-        line_seg = context.get(self.line_seg_input) if self.line_seg_input is not None else None
 
-        vis_img = detect.plot_fitted_lane(binary_img, lane_fit, line_seg)
+        vis_img = lane.plot_fitted_lane()
 
         context[self.output] = vis_img
 
         return vis_img
 
 
-class CalcCurvatureNode(PipeNode):
-
-    def __init__(self, lane_fit_input, output):
-        self.input = lane_fit_input
-        self.output = output
-
-    def _action(self, context):
-        lane_fit = context.get(self.input)
-        if lane_fit is None:
-            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
-
-        curvature = detect.calc_curv(lane_fit)
-
-        context[self.output] = curvature
-        return curvature
-
-
-class CalcOffsetNode(PipeNode):
-
-    def __init__(self, lane_fit_input, output):
-        self.input = lane_fit_input
-        self.output = output
-
-    def _action(self, context):
-        lane_fit = context.get(self.input)
-        if lane_fit is None:
-            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
-
-        offset = detect.calc_offset(lane_fit)
-
-        context[self.output] = offset
-        return offset
-
-
-class CreateLaneObjNode(PipeNode):
-    def __init__(self, lane_fit_input, output):
-        self.input = lane_fit_input
-        self.output = output
-
-    def _action(self, context):
-        lane_fit = context.get(self.input)
-        if lane_fit is None:
-            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
-
-        lo = detect.Lane(lane_fit)
-
-        context[self.output] = lane_fit
-        return lo
-
-
 def create_image_pipeline():
-    return PipeLine([
-        OverlayRoiNode(input='img',
-                       output='img_roi'),
-        CalibrationNode(input='img',
-                        output='img'),
-        ThresholdingNode(input='img',
-                         output='binary'),
-        CuttingNode(input='binary',
-                    output='binary'),
-        TopPerspectiveNode(input='binary',
-                           output='binary_warped'),
-        LaneDetectionNode(binary_input='binary_warped', prior=None,
-                          lane_fit_output='lane_fit', line_seg_output='line_seg'),
-        DisplayLaneFitNode(binary_input='binary_warped', lane_fit_input='lane_fit', line_seg_input='line_seg',
-                           vis_output='fitted_lane_img'),
-        CreateLaneObjNode(lane_fit_input='lane_fit', output='lane_obj')
-    ])
+    return PipeLine('Image processing',
+        [
+            OverlayRoiNode(input='img',
+                           output='img_roi'),
+            CalibrationNode(input='img',
+                            output='img'),
+            ThresholdingNode(input='img',
+                             output='binary'),
+            CuttingNode(input='binary',
+                        output='binary'),
+            TopPerspectiveNode(input='binary',
+                               output='binary_warped'),
+            LaneDetectionNode(binary_input='binary_warped', prior_lane_input=None,
+                              output='lane'),
+            DisplayLaneFitNode(lane_input='lane',
+                               output='fitted_lane_img')
+        ])
 
 
 def _main():

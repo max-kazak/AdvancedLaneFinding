@@ -14,13 +14,93 @@ log = logging.getLogger("lanefinder.detect")
 
 class Lane:
 
-    def __init__(self, lane_fit):
+    def __init__(self, lane_fit, line_seg=None, lane_mask=None, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
         self.lane_fit = lane_fit
-        self.curvature = calc_curv(lane_fit)
-        self.offset = calc_offset(lane_fit)
+        self.line_seg = line_seg
+        self.lane_mask = lane_mask
+
+        self.ym_per_px = ym_per_px
+        self.xm_per_px = xm_per_px
+        self.img_shape = img_shape
+
+        self.curvature = None
+        self.offset = None
+
+    def plot_fitted_lane(self):
+        left_fit, right_fit = self.lane_fit
+        if self.lane_mask is not None:
+            out_img = utils.mask_to_3ch(self.lane_mask)
+        else:
+            out_img = np.zeros((self.img_shape[1], self.img_shape[0], 3), dtype=np.uint8)
+        # Generate x and y values for plotting
+        ploty = np.linspace(0, self.img_shape[1] - 1, self.img_shape[1])
+        try:
+            left_fitx = utils.polyval(left_fit, ploty)
+            right_fitx = utils.polyval(right_fit, ploty)
+        except TypeError:
+            # Avoids an error if `left` and `right_fit` are still none or incorrect
+            log.warning('The function failed to fit a line!')
+            left_fitx = 1 * ploty ** 2 + 1 * ploty
+            right_fitx = 1 * ploty ** 2 + 1 * ploty
+
+        ## Visualization ##
+        if self.line_seg is not None:
+            leftx, lefty, rightx, righty = self.line_seg
+            # Colors in the left and right lane regions
+            out_img[lefty, leftx] = [255, 0, 0]
+            out_img[righty, rightx] = [0, 0, 255]
+
+        # Plots the left and right polynomials on the lane lines
+        fig, plot = utils.plot_for_img(out_img)
+        plot.plot(left_fitx, ploty, color='yellow')
+        plot.plot(right_fitx, ploty, color='yellow')
+        plot.imshow(out_img)
+        plt_img = utils.fig2data(fig)
+
+        return plt_img
+
+    def get_curv(self):
+        if self.curvature is None:
+            left_fit, right_fit = self.lane_fit
+
+            y_eval_m = self.img_shape[1] * self.ym_per_px
+
+            # x = Ay^2 + By + C
+            leftA = left_fit[0] * self.xm_per_px / self.ym_per_px ** 2
+            leftB = left_fit[1] * self.xm_per_px / self.ym_per_px
+            rightA = right_fit[0] * self.xm_per_px / self.ym_per_px ** 2
+            rightB = right_fit[1] * self.xm_per_px / self.ym_per_px
+
+            left_curverad_m = ((1 + (2 * leftA * y_eval_m + leftB) ** 2) ** 1.5) / np.absolute(2 * leftA)
+            right_curverad_m = ((1 + (2 * rightA * y_eval_m + rightB) ** 2) ** 1.5) / np.absolute(2 * rightA)
+
+            lane_curve_m = (left_curverad_m + right_curverad_m) / 2
+
+            log.info("lane curvature = {}m".format(int(round(lane_curve_m))))
+
+            self.curvature = left_curverad_m, right_curverad_m
+
+        return self.curvature
+
+    def get_offset(self):
+        if self.offset is None:
+            left_fit, right_fit = self.lane_fit
+
+            left_bottom_x = utils.polyval(left_fit, self.img_shape[1] - 1)
+            right_bottom_x = utils.polyval(right_fit, self.img_shape[1] - 1)
+
+            offset_px = left_bottom_x + (right_bottom_x - left_bottom_x) // 2 - self.img_shape[0] // 2
+            offset_m = offset_px * self.xm_per_px
+
+            log.info("car position off center = {}m".format(round(offset_m, 2)))
+
+            self.offset = offset_m
+
+        return self.offset
 
     def __str__(self):
-        return "Lane: left_curv({lcurv}m), right_curv({rcurv}m), offset({offset}m)".format(
+        return "Lane {params}: left_curv({lcurv}m), right_curv({rcurv}m), offset({offset}m)".format(
+            params=self.lane_fit,
             lcurv=int(round(self.curvature[0])),
             rcurv=int(round(self.curvature[1])),
             offset=round(self.offset, 2)
@@ -222,7 +302,7 @@ def _fit_polynomial(leftx, lefty, rightx, righty):
     return left_fit, right_fit
 
 
-def detect_llines(binary_warped, prior=None, margin=75, debug=True):
+def detect_llines(binary_warped, prior_lane=None, margin=50, debug=True):
     """
     Detect lane lines.
     Uses window-based detection if prior is None.
@@ -232,117 +312,36 @@ def detect_llines(binary_warped, prior=None, margin=75, debug=True):
     :param margin: width of the area where to search to line pixels around probable location
     :return: lane_fit, line_seg - fitted A,B,C parameters for both lane lines equation x=Ay^2+By+C
     """
-    if prior is None:
+    if prior_lane is None:
         log.info('fitting lane lines using histogram and sliding windows')
         leftx, lefty, rightx, righty = _segment_llines_noprior(binary_warped, margin=margin)
     else:
         log.info('fitting lane lines using prior')
         leftx, lefty, rightx, righty = _segment_llines_prior(binary_warped,
-                                                             prior,
+                                                             prior_lane.lane_fit,
                                                              margin=margin)
 
     left_fit, right_fit = _fit_polynomial(leftx, lefty, rightx, righty)
 
+    lane_obj = Lane(lane_fit=(left_fit, right_fit), line_seg=(leftx, lefty, rightx, righty), lane_mask=binary_warped)
+
     if log.getEffectiveLevel() == logging.DEBUG and debug:
-        plt_img = plot_fitted_lane(binary_warped, (left_fit, right_fit), (leftx, lefty, rightx, righty))
+        plt_img = lane_obj.plot_fitted_lane()
         cv2.imshow('fitted lines', plt_img)
         cv2.waitKey()
 
-    return (left_fit, right_fit), (leftx, lefty, rightx, righty)
-
-
-def plot_fitted_lane(binary_warped, lane_fit, line_seg=None):
-    left_fit, right_fit = lane_fit
-    leftx, lefty, rightx, righty = line_seg
-    out_img = utils.mask_to_3ch(binary_warped)
-    # Generate x and y values for plotting
-    ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
-    try:
-        left_fitx = utils.polyval(left_fit, ploty)
-        right_fitx = utils.polyval(right_fit, ploty)
-    except TypeError:
-        # Avoids an error if `left` and `right_fit` are still none or incorrect
-        log.warning('The function failed to fit a line!')
-        left_fitx = 1 * ploty ** 2 + 1 * ploty
-        right_fitx = 1 * ploty ** 2 + 1 * ploty
-
-    ## Visualization ##
-    if line_seg is not None:
-        # Colors in the left and right lane regions
-        out_img[lefty, leftx] = [255, 0, 0]
-        out_img[righty, rightx] = [0, 0, 255]
-
-    # Plots the left and right polynomials on the lane lines
-    fig, plot = utils.plot_for_img(out_img)
-    plot.plot(left_fitx, ploty, color='yellow')
-    plot.plot(right_fitx, ploty, color='yellow')
-    plot.imshow(out_img)
-    plt_img = utils.fig2data(fig)
-
-    return plt_img
-
-
-def calc_curv(lane_fit, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
-    """
-    Calculates curvature of the fitted lane in meters.
-
-    :param lane_fit: tuple(left_fit, right_fit) - parameters of the polynomial equation describing lane lines
-    :param ym_per_px: m/px coefficient for y direction
-    :param xm_per_px: m/px coefficient for x direction
-    :param img_shape: shape of the top-view image where line equations where fitted
-    :return: left line curvature, right line curvature in meters
-    """
-    left_fit, right_fit = lane_fit
-
-    y_eval_m = img_shape[1] * ym_per_px
-
-    # x = Ay^2 + By + C
-    leftA = left_fit[0] * xm_per_px / ym_per_px ** 2
-    leftB = left_fit[1] * xm_per_px / ym_per_px
-    rightA = right_fit[0] * xm_per_px / ym_per_px ** 2
-    rightB = right_fit[1] * xm_per_px / ym_per_px
-
-    left_curverad_m = ((1 + (2 * leftA * y_eval_m + leftB) ** 2) ** 1.5) / np.absolute(2 * leftA)
-    right_curverad_m = ((1 + (2 * rightA * y_eval_m + rightB) ** 2) ** 1.5) / np.absolute(2 * rightA)
-
-    lane_curve_m = (left_curverad_m + right_curverad_m) / 2
-
-    log.info("lane curvature = {}m".format(int(round(lane_curve_m))))
-
-    return left_curverad_m, right_curverad_m
-
-
-def calc_offset(lane_fit, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
-    """
-    Calculates vehicle offset from the center of the lane in meters.
-
-    :param lane_fit: tuple(left_fit, right_fit) - parameters of the polynomial equation describing lane lines
-    :param xm_per_px: m/px coefficient for x direction
-    :param img_shape: shape of the top-view image where line equations where fitted
-    :return: offset value in meters (<0 to the left, >0 to the right)
-    """
-    left_fit, right_fit = lane_fit
-
-    left_bottom_x = utils.polyval(left_fit, img_shape[1]-1)
-    right_bottom_x = utils.polyval(right_fit, img_shape[1]-1)
-
-    offset_px = left_bottom_x + (right_bottom_x - left_bottom_x) // 2 - img_shape[0] // 2
-    offset_m = offset_px * xm_per_px
-
-    log.info("car position off center = {}m".format(round(offset_m, 2)))
-
-    return offset_m
+    return lane_obj
 
 
 def _main():
     filenames = os.listdir(paths.DIR_TEST_IMG_WARPED_LANES)
-    lane_fit = None
+    lane = None
     for filename in filenames:
         img = cv2.imread(os.path.join(paths.DIR_TEST_IMG_WARPED_LANES, filename))
         mask = np.zeros((img.shape[0], img.shape[1]))
         mask[img[:, :, 0] > 0] = 1
-        lane_fit = None  # comment out if want to test prior segmentation
-        lane_fit, line_seg = detect_llines(mask, lane_fit)
+        lane = None  # comment out if want to test prior segmentation
+        lane = detect_llines(mask, prior_lane=lane)
 
 
 if __name__ == '__main__':
