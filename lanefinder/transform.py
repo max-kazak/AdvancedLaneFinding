@@ -9,12 +9,12 @@ import utils
 
 log = logging.getLogger("lanefinder.transform")
 
-_src_top_mar = 550
+_src_top_mar = 535
 _scr_bottom_mar = 170
 _dst_top_mar = 400
 _dst_bottom_mar = 500
-WARP_SRC_PTS = [(_src_top_mar, 450),
-                (1280 - _src_top_mar, 450),
+WARP_SRC_PTS = [(_src_top_mar, 460),
+                (1280 - _src_top_mar, 460),
                 (1280 - _scr_bottom_mar, 690),
                 (_scr_bottom_mar, 690)]
 WARP_DST_PTS = [(_dst_top_mar, 0),
