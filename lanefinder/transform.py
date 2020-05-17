@@ -126,13 +126,20 @@ def combined_threshold(img, debug=False):
     :param debug: show overlayed mask if log.getEffectiveLevel() == logging.DEBUG
     :return: combined binary mask of img size (1 channel)
     """
-    mag = grad_thresholding(img, thresh_mag=(50, 200), kernel_size=5)
-    dir = grad_thresholding(img, thresh_dir=(np.pi/9, np.pi/3), kernel_size=9)
-    sat = color_thresholding(img, thresh_s=(100, 255))
-    hue = color_thresholding(img, thresh_h=(15, 50))
+    thresh_mag = (30, 200)
+    thresh_dir = (0.3 * np.pi/2, 0.8 * np.pi/2)
+    thresh_s = (100, 255)
+    thresh_h = (10, 25)
+    # mag = grad_thresholding(img, thresh_mag=(20, 200), kernel_size=5)
+    # dir = grad_thresholding(img, thresh_dir=(0, 0.8 * np.pi/2), kernel_size=5)
+    # sat = color_thresholding(img, thresh_s=(100, 255))
+    # hue = color_thresholding(img, thresh_h=(10, 25))
     # lum = color_thresholding(img, thresh_l=(200, 220))
 
-    mask = sat * hue + mag * dir
+    # mask = sat * hue + mag * dir
+    mask = color_thresholding(img, thresh_h=thresh_h, thresh_s=thresh_s) + \
+           grad_thresholding(img, thresh_mag=thresh_mag, thresh_dir=thresh_dir, kernel_size=5)
+    mask[mask > 0] = 1
 
     if log.getEffectiveLevel() == logging.DEBUG and debug:
         mask_3ch = np.zeros_like(img)
