@@ -38,6 +38,25 @@ class PipeNode:
         raise RuntimeError('Called abstract method PipeNode._action()')
 
 
+class ColorCvtNode(PipeNode):
+
+    RGB2BGR = cv2.COLOR_RGB2BGR
+    BGR2RGB = cv2.COLOR_BGR2RGB
+
+    def __init__(self, input, output, mode):
+        self.input = input
+        self.output = output
+        self.mode = mode
+
+    def _action(self, context):
+        img = context.get(self.input)
+        if img is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.input))
+        img_cvt = cv2.cvtColor(img, self.mode)
+        context[self.output] = img_cvt
+        return img_cvt
+
+
 class CalibrationNode(PipeNode):
 
     def __init__(self, input, output,
@@ -297,9 +316,11 @@ def _create_lane_perception_pipeline():
 
 def _main():
     pipeline1 = _create_lane_perception_pipeline()
-    filenames = os.listdir(paths.DIR_TEST_IMG)
+    img_dir = 'debug'
+    # filenames = os.listdir(img_dir)
+    filenames = os.listdir('debug')
     for filename in filenames:
-        img = cv2.imread(os.path.join(paths.DIR_TEST_IMG, filename))
+        img = cv2.imread(os.path.join(img_dir, filename))
         context = {'img': img}
 
         final_res = pipeline1.passthrough(context)
@@ -322,10 +343,12 @@ if __name__ == '__main__':
     ch = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)20s | %(message)s')
     ch.setFormatter(formatter)
-    logging.getLogger('lanefinder').addHandler(ch)
-    log.setLevel(logging.DEBUG)
+
+    root_logger = logging.getLogger('lanefinder')
+    root_logger.addHandler(ch)
+    root_logger.setLevel(logging.DEBUG)
 
     detect_logger = logging.getLogger('lanefinder.detect')
-    detect_logger.setLevel(logging.INFO)
+    #detect_logger.setLevel(logging.INFO)
 
     _main()

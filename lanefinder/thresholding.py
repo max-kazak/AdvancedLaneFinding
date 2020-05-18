@@ -1,3 +1,7 @@
+"""
+Run this script to test different threshold levels.
+"""
+
 import os
 
 import cv2
