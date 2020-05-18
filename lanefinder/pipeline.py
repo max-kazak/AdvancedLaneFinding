@@ -227,6 +227,40 @@ class DrawLaneNode(PipeNode):
         return vis_img
 
 
+class AddTextNode(PipeNode):
+
+    def __init__(self, lane_input, img_input, output):
+        self.output = output
+        self.img_input = img_input
+        self.lane_input = lane_input
+
+    def _action(self, context):
+        lane = context.get(self.lane_input)
+        if lane is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.lane_input))
+        img = context.get(self.img_input)
+        if img is None:
+            raise exceptions.PipeException("missing context parameter: {}".format(self.img_input))
+
+        curv = lane.get_curv()
+
+        offset = lane.get_offset()
+
+        img_ar = img.copy()
+
+        h = img_ar.shape[0]
+        font = cv2.FONT_HERSHEY_DUPLEX
+        text = 'Curve radius: {:4.0f}m'.format(np.absolute(curv))
+        cv2.putText(img_ar, text, (40, 70), font, 1.5, (200, 255, 155), 2, cv2.LINE_AA)
+
+        offset_dir = 'right' if offset > 0 else 'left'
+        text = '{:04.2f}m {} of center'.format(np.absolute(offset), offset_dir)
+        cv2.putText(img_ar, text, (40, 120), font, 1.5, (200, 255, 155), 2, cv2.LINE_AA)
+
+        context[self.output] = img_ar
+        return img_ar
+
+
 def _create_lane_perception_pipeline():
     return PipeLine('Lane perception',
         [
@@ -234,6 +268,10 @@ def _create_lane_perception_pipeline():
                             output='img'),
             OverlayRoiNode(input='img',
                            output='img_roi'),
+            # CuttingNode(input='img',
+            #             output='img_cut'),
+            # PerspectiveNode(input='img_cut',
+            #                 output='calib_img'),
             ThresholdingNode(input='img',
                              output='binary'),
             CuttingNode(input='binary',
@@ -251,7 +289,9 @@ def _create_lane_perception_pipeline():
             PerspectiveNode(input='lane_img', inv=True,
                             output='lane_img'),
             OverlayImagesNode(bckgrnd_input='img', overlay_input='lane_img',
-                              output='lane_ar')
+                              output='lane_ar'),
+            AddTextNode(lane_input='lane', img_input='lane_ar',
+                        output='lane_ar')
         ])
 
 
@@ -264,6 +304,8 @@ def _main():
 
         final_res = pipeline1.passthrough(context)
 
+        cv2.imshow("input image", context['img_roi'])
+
         if isinstance(final_res, np.ndarray):
             if len(final_res.shape) == 2:
                 final_res = utils.mask_to_3ch(final_res)
@@ -271,8 +313,7 @@ def _main():
         else:
             print(final_res)
 
-        cv2.imshow("input image", context['img_roi'])
-        # cv2.imshow("fitted lane", context['fitted_lane_img'])
+        cv2.imshow("fitted lane", context['fitted_lane_img'])
         cv2.waitKey()
 
 
