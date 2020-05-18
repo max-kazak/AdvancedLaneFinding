@@ -1,5 +1,6 @@
 import os
 import logging
+import collections
 
 import numpy as np
 import cv2
@@ -46,7 +47,7 @@ def process_images(in_dir, out_dir):
 
 
 def process_video(in_file, out_file):
-    pipeline = PipeLine('Lane perception', [
+    preproc_pipeline = PipeLine('Lane perception', [
         ColorCvtNode(input='img', mode=ColorCvtNode.RGB2BGR,
                      output='img'),
         CalibrationNode(input='img',
@@ -59,8 +60,10 @@ def process_video(in_file, out_file):
                         output='binary_warped'),
         GrayThresholdingNode(gray_input='binary_warped', thresh=0.8,
                              output='binary_warped'),
-        LaneDetectionNode(binary_input='binary_warped', prior_lane_input=None,
+        LaneDetectionNode(binary_input='binary_warped', prior_lane_input='prior_lane',
                           output='lane'),
+    ])
+    postproc_pipeline = PipeLine('Lane Augmented Reality', [
         DrawLaneNode(lane_input='lane', mode='area',
                      output='lane_img'),
         PerspectiveNode(input='lane_img', inv=True,
@@ -73,10 +76,36 @@ def process_video(in_file, out_file):
                      output='lane_ar'),
     ])
 
+    lane_stack = collections.deque(maxlen=2)
+    last_good_lane = None
+
     def process_frame(frame):
-        # cv2.imwrite('debug/failed.png', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        context = {'img': frame}
-        pipeline.passthrough(context)
+        # point to outside vars
+        nonlocal lane_stack
+        nonlocal last_good_lane
+
+        if len(lane_stack) > 0:
+            prior_lane = lane_stack[0]
+        else:
+            log.warning('no more prior lanes left, starting over...')
+            prior_lane = None
+
+        context = {'img': frame, 'prior_lane': prior_lane}
+        preproc_pipeline.passthrough(context)
+
+        lane = context['lane']
+        if not lane.validate(prior_lane=prior_lane):
+            log.warning('new lane is too bad, keep using last good lane')
+            if len(lane_stack) > 0:
+                lane_stack.pop()  # rm one lane from the stacks bottom
+            lane = last_good_lane
+        else:
+            lane_stack.appendleft(lane)
+            last_good_lane = lane
+
+        context['lane'] = lane  # lane to display
+        postproc_pipeline.passthrough(context)
+
         return context['lane_ar']
 
     video_input = VideoFileClip(in_file)#.subclip(555/25, 560/25)
@@ -85,10 +114,9 @@ def process_video(in_file, out_file):
 
 
 def main():
-    process_images(paths.DIR_TEST_IMG, paths.DIR_OUTPUT_IMG)
-    # process_video(os.path.join(paths.DIR_VIDEOS, paths.FILE_VIDEO_1),
-    # os.path.join(paths.DIR_OUTPUT_VIDEOS, paths.FILE_VIDEO_1))
-
+    # process_images(paths.DIR_TEST_IMG, paths.DIR_OUTPUT_IMG)
+    process_video(os.path.join(paths.DIR_VIDEOS, paths.FILE_VIDEO_1),
+                  os.path.join(paths.DIR_OUTPUT_VIDEOS, paths.FILE_VIDEO_1))
 
 
 if __name__ == '__main__':

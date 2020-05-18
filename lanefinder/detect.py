@@ -12,6 +12,10 @@ from transform import YM_PER_PX, XM_PER_PX
 log = logging.getLogger("lanefinder.detect")
 
 
+STRAIGHT_LINE_CURV_THRESHOLD = 700
+PRC_LINE_CURV_DIFF_THRESHOLD = 0.8
+
+
 class Lane:
 
     def __init__(self, lane_fit, line_seg=None, lane_mask=None, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
@@ -137,6 +141,40 @@ class Lane:
             self.offset = offset_m
 
         return self.offset
+
+    def validate(self, prior_lane=None):
+        lline_curv, rline_curv = self.get_lcurvs()
+        if abs(lline_curv) > STRAIGHT_LINE_CURV_THRESHOLD \
+                or abs(rline_curv) > STRAIGHT_LINE_CURV_THRESHOLD:
+            # pretty much a straight line, should be fine
+            log.info('result of validation: lines are straight')
+            return True
+
+        if lline_curv * rline_curv < 0:
+            # curves in different directions
+            log.warning('lines curve in different directions')
+            return False
+
+        prc_curv_diff = abs((lline_curv - rline_curv) / lline_curv)
+        if prc_curv_diff > PRC_LINE_CURV_DIFF_THRESHOLD:
+            log.warning('lines curvature({},{}) difference exceeds threshold: {:.2f}/{:.2f}'.format(
+                round(lline_curv), round(rline_curv),
+                prc_curv_diff,
+                PRC_LINE_CURV_DIFF_THRESHOLD))
+            return False
+
+        if prior_lane is not None:
+            lfit, rfit = self.lane_fit
+            lfit_prior, rfit_prior = prior_lane.lane_fit
+            ldiffs = abs(lfit - lfit_prior)
+            rdiffs = abs(rfit - rfit_prior)
+            if (ldiffs[0] > 0.001 or ldiffs[1] > 1.0 or ldiffs[2] > 100.) or \
+                    (rdiffs[0] > 0.001 or rdiffs[1] > 1.0 or rdiffs[2] > 100.):
+                log.warning('new lane is too different from prior')
+                return False
+
+        return True
+
 
     def __str__(self):
         return "Lane {params}: left_curv({lcurv}m), right_curv({rcurv}m), offset({offset}m)".format(
