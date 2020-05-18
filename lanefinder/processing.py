@@ -94,16 +94,22 @@ def process_video(in_file, out_file):
         preproc_pipeline.passthrough(context)
 
         lane = context['lane']
+        display_lane = last_good_lane
         if not lane.validate(prior_lane=prior_lane):
             log.warning('new lane is too bad, keep using last good lane')
             if len(lane_stack) > 0:
                 lane_stack.pop()  # rm one lane from the stacks bottom
-            lane = last_good_lane
         else:
-            lane_stack.appendleft(lane)
-            last_good_lane = lane
+            # smooth lane
+            lanefits = [lane.lane_fit for lane in lane_stack]
+            lanefits.append(lane.lane_fit)
+            display_lane = lane.copy()
+            display_lane.lane_fit = _smooth_lane_fit(lanefits)
+            last_good_lane = display_lane
 
-        context['lane'] = lane  # lane to display
+            lane_stack.appendleft(lane)
+
+        context['lane'] = display_lane  # lane to display
         postproc_pipeline.passthrough(context)
 
         return context['lane_ar']
@@ -112,6 +118,13 @@ def process_video(in_file, out_file):
     video_processed = video_input.fl_image(process_frame)
     video_processed.write_videofile(out_file, audio=False)
 
+
+def _smooth_lane_fit(lanefits):
+    llinefits = np.array([lanefit[0] for lanefit in lanefits])
+    rlinefits = np.array([lanefit[1] for lanefit in lanefits])
+    llinefit_avg = np.mean(llinefits, axis=0)
+    rlinefit_avg = np.mean(rlinefits, axis=0)
+    return (llinefit_avg, rlinefit_avg)
 
 def main():
     # process_images(paths.DIR_TEST_IMG, paths.DIR_OUTPUT_IMG)

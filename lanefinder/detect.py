@@ -30,6 +30,9 @@ class Lane:
         self.curvature = None
         self.offset = None
 
+    def copy(self):
+        return Lane(self.lane_fit, self.line_seg, self.lane_mask)
+
     def plot_fitted_lane(self):
         left_fit, right_fit = self.lane_fit
         if self.lane_mask is not None:
