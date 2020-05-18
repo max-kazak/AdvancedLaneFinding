@@ -89,12 +89,11 @@ class Lane:
 
         return lane_img
 
-
-    def get_curv(self):
+    def get_lcurvs(self):
         if self.curvature is None:
             left_fit, right_fit = self.lane_fit
 
-            y_eval_m = self.img_shape[1] * self.ym_per_px
+            y_eval_m = (self.img_shape[1] - 10) * self.ym_per_px
 
             # x = Ay^2 + By + C
             leftA = left_fit[0] * self.xm_per_px / self.ym_per_px ** 2
@@ -116,14 +115,21 @@ class Lane:
 
         return self.curvature
 
+    def get_curv(self):
+        curvature = self.get_lcurvs()
+        curv_avg = (np.absolute(curvature[0]) + np.absolute(curvature[1])) / 2
+        return curv_avg
+
     def get_offset(self):
         if self.offset is None:
             left_fit, right_fit = self.lane_fit
 
-            left_bottom_x = utils.polyval(left_fit, self.img_shape[1] - 1)
-            right_bottom_x = utils.polyval(right_fit, self.img_shape[1] - 1)
+            y_eval = self.img_shape[1] - 10
 
-            offset_px = left_bottom_x + (right_bottom_x - left_bottom_x) // 2 - self.img_shape[0] // 2
+            left_bottom_x = utils.polyval(left_fit, y_eval)
+            right_bottom_x = utils.polyval(right_fit, y_eval)
+
+            offset_px = self.img_shape[0] / 2 - (right_bottom_x + left_bottom_x) / 2
             offset_m = offset_px * self.xm_per_px
 
             log.info("car position off center = {}m".format(round(offset_m, 2)))
