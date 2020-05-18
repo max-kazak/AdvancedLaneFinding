@@ -94,7 +94,7 @@ def process_video(in_file, out_file):
         preproc_pipeline.passthrough(context)
 
         lane = context['lane']
-        display_lane = last_good_lane
+        display_lane = last_good_lane if last_good_lane is not None else lane
         if not lane.validate(prior_lane=prior_lane):
             log.warning('new lane is too bad, keep using last good lane')
             if len(lane_stack) > 0:
@@ -126,10 +126,15 @@ def _smooth_lane_fit(lanefits):
     rlinefit_avg = np.mean(rlinefits, axis=0)
     return (llinefit_avg, rlinefit_avg)
 
+
 def main():
-    # process_images(paths.DIR_TEST_IMG, paths.DIR_OUTPUT_IMG)
+    process_images(paths.DIR_TEST_IMG, paths.DIR_OUTPUT_IMG)
     process_video(os.path.join(paths.DIR_VIDEOS, paths.FILE_VIDEO_1),
                   os.path.join(paths.DIR_OUTPUT_VIDEOS, paths.FILE_VIDEO_1))
+    # process_video(os.path.join(paths.DIR_VIDEOS, paths.FILE_VIDEO_2),
+    #               os.path.join(paths.DIR_OUTPUT_VIDEOS, paths.FILE_VIDEO_2))
+    # process_video(os.path.join(paths.DIR_VIDEOS, paths.FILE_VIDEO_3),
+    #               os.path.join(paths.DIR_OUTPUT_VIDEOS, paths.FILE_VIDEO_3))
 
 
 if __name__ == '__main__':
