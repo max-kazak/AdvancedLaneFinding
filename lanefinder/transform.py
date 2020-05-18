@@ -126,8 +126,8 @@ def combined_threshold(img, debug=False):
     :param debug: show overlayed mask if log.getEffectiveLevel() == logging.DEBUG
     :return: combined binary mask of img size (1 channel)
     """
-    thresh_mag = (30, 200)
-    thresh_dir = (0.3 * np.pi/2, 0.8 * np.pi/2)
+    thresh_mag = (45, 200)
+    thresh_dir = (0.3 * np.pi/2, 0.7 * np.pi/2)
     thresh_s = (100, 255)
     thresh_h = (10, 25)
     # mag = grad_thresholding(img, thresh_mag=(20, 200), kernel_size=5)
