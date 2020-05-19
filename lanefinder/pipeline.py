@@ -316,9 +316,8 @@ def _create_lane_perception_pipeline():
 
 def _main():
     pipeline1 = _create_lane_perception_pipeline()
-    img_dir = 'debug'
-    # filenames = os.listdir(img_dir)
-    filenames = os.listdir('debug')
+    img_dir = paths.DIR_TEST_IMG
+    filenames = os.listdir(img_dir)
     for filename in filenames:
         img = cv2.imread(os.path.join(img_dir, filename))
         context = {'img': img}
@@ -334,7 +333,7 @@ def _main():
         else:
             print(final_res)
 
-        cv2.imshow("fitted lane", context['fitted_lane_img'])
+        # cv2.imshow("fitted lane", context['fitted_lane_img'])
         cv2.waitKey()
 
 
@@ -349,6 +348,6 @@ if __name__ == '__main__':
     root_logger.setLevel(logging.DEBUG)
 
     detect_logger = logging.getLogger('lanefinder.detect')
-    #detect_logger.setLevel(logging.INFO)
+    detect_logger.setLevel(logging.INFO)
 
     _main()
