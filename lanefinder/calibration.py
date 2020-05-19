@@ -57,9 +57,9 @@ def _calibrate(calib_img_path=paths.DIR_CAMERA_CAL, debug=False):
     objp = np.zeros((6 * 9, 3), np.float32)
     objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
 
-    filenames_cal = os.listdir(paths.DIR_CAMERA_CAL)
+    filenames_cal = os.listdir(calib_img_path)
     for filename_cal in filenames_cal:
-        img = cv2.imread(os.path.join(paths.DIR_CAMERA_CAL, filename_cal))
+        img = cv2.imread(os.path.join(calib_img_path, filename_cal))
         corners = _find_chessboard_corners(img)
         if corners is None:
             log.warning("error finding chessboard corners in {}".format(filename_cal))
@@ -67,7 +67,7 @@ def _calibrate(calib_img_path=paths.DIR_CAMERA_CAL, debug=False):
             imgpoints.append(corners)
             objpoints.append(objp)
 
-    test_img = cv2.imread(os.path.join(paths.DIR_CAMERA_CAL, filenames_cal[0]))
+    test_img = cv2.imread(os.path.join(calib_img_path, filenames_cal[0]))
     img_size = (img.shape[1], img.shape[0])
 
     # Calculate calibration
