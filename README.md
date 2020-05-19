@@ -1,21 +1,40 @@
-## Advanced Lane Finding
+Advanced Lane Finding
 ============================================
 
 ![](data/output_images/test2.jpg)
 
-In this project, your goal is to write a software pipeline to identify the lane boundaries in a video, but the main output or product we want you to create is a detailed writeup of the project.  Check out the [writeup template](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup.  
+In this project, I wrote a software pipeline to identify the lane boundaries in a video as a prototype for autonomous car perception system responsible for lane navigation.
 
-Creating a great writeup:
----
-A great writeup should include the rubric points as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+## Project Structure
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+Project has following directory structure:  
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
+**.**  
+**├── data**                 - folder with all data  
+**│   ├── camera_cal**       - camera calibration images    
+**│   ├── test_images**      - folder with raw test images  
+**│   ├── videos**           - folder with raw videos  
+**│   ├── output_images**    - here goes all processed test images  
+**│   └── output_videos**    - here goes all processed videos  
+**├── lanefinder**           - project's source code  
+**│   ├── calibration.py**   - module with camera calibration related code  
+**│   ├── detect.py**        - module with detection related code  
+**│   ├── exceptions.py**    - module with custom exceptions  
+**│   ├── paths.py**         - module with path constants  
+**│   ├── pipeline.py**      - module with pipline related code  
+**│   ├── processing.py**    - entry-point module that launches image/video processing  
+**│   ├── thresholding.py**  - module with image thresholding related code  
+**│   ├── transform.py**     - module with image transformation related code  
+**│   └── utils.py**         - module with common-purpose functionality code
+**├── report**               - folder with report images  
+**├── calibration.p**        - pickle file with saved calibration matrices  
+**└── requirements.txt**     - project library requirements  
 
-The Project
----
 
+## Pipeline
+
+
+------------------------DELETE-------------------------------------
 The goals / steps of this project are the following:
 
 * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
@@ -34,7 +53,3 @@ To help the reviewer examine your work, please save examples of the output from 
 The `challenge_video.mp4` video is an extra (and optional) challenge for you if you want to test your pipeline under somewhat trickier conditions.  The `harder_challenge.mp4` video is another optional challenge and is brutal!
 
 If you're feeling ambitious (again, totally optional though), don't stop there!  We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
