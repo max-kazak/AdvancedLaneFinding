@@ -1,7 +1,7 @@
 Advanced Lane Finding
 ============================================
 
-In this project, I wrote a software pipeline that comprised of various Computer Vision techniques to identify the lane boundaries in a video as a prototype for autonomous car perception system responsible for lane navigation.
+In this project, I wrote a software pipeline comprised of various Computer Vision techniques to identify the lane boundaries in a video as a prototype for autonomous car perception system responsible for lane navigation.
 
 [![Result Video](report/youtube_thumbnail.jpg)](https://www.youtube.com/watch?v=IhAv3MpZY7k)
 
@@ -31,10 +31,26 @@ Project has following directory structure:
 **└── requirements.txt**     - project library requirements  
 
 
-## Pipeline
+## Pipeline  
 
+Following diagram shows key components of the software pipeline and flow of the data through them. Below the diagram is the detailed description of the pipline nodes.  
 
-------------------------DELETE-------------------------------------
+![Calibration>Thresholding>BirdviewTransformation>LaneDetection>LaneValidation>LaneSmoothing>CameraViewTransformation>ARProcessing](report/LaneFinderPipeline.png)  
+
+### Camera Calibration  
+
+Because no camera lens or sensor are perfect both of those components add distortions to the image they capture. Before proceeding to the lane detection these distortions have to be addressed first.  
+In this project I'm using set of images capturing chessboard from various angles.  
+![](report/calibration/distorted_image.png)  
+By detecting corners of the chessboard it is possible to calculate calibration matrices.  
+![](report/calibration/find_corners.png)  
+Calculated calibration matrices are stored into pickle file *calibration.p* to be reused later during video processing. This way calibration process can be skipped to reduce processing time.  
+After calibration process images and video frames can be undistorted using calibration matrices.  
+![](report/calibration/undistorted_image.png)  
+
+### Thresholding  
+
+------------------------DELETE-------------------------------------  
 The goals / steps of this project are the following:
 
 * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
