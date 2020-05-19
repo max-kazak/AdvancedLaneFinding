@@ -56,9 +56,18 @@ To build the model of the lane it is first necessary to segment-out pixels that 
 
 Image gradients show how fast pixel intensity is changing in vertical and horizontal directions. Thus it is possible to detect edges and lines on the images.  
 So to separate road lines I created binary mask that shows pixels which gradient magnitude and direction are within specified boundaries.  
- ![](report/thresholding/grad2.png)
+![](report/test_images/001.jpg)![](report/thresholding/grad2.jpg)  
  
- This method produces well defined lines that are easy to use for creating line models. But one of the big downsides of such approach is if intensity of the line is low compared to the road it's very difficult to discern it using gradients. 
+ This method produces well defined lines that are easy to use for creating line models. But one of the big downsides of such approach is if intensity of the line is low compared to the road it's very difficult to discern it using gradients.  
+ 
+![](report/test_images/005.jpg)![](report/thresholding/grad6.jpg) 
+
+#### Color thresholding  
+
+To address shortcomings of the gradient thresholding I combined it with color thresholding. Color thresholding is the process of image segmentation based on the color of particular pixel.  
+But due to changing conditions on the road (e.g. shadows) choosing colors in RGB color space is unreliable. Instead I used HSL color space that separates Hue and Saturation of the color from Lightness that changes the most in the shadows. Using thresholds based on Hue boaundaries and Saturation I achieved much more consistent lane lines separation.  
+
+![](report/test_images/005.jpg)![](report/thresholding/color6.jpg) 
 
 ------------------------DELETE-------------------------------------  
 The goals / steps of this project are the following:
