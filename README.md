@@ -78,8 +78,27 @@ When looking for the lane we can make a rough guess where on the image it can be
 
 Bird-eye view persective (aka top view perspective) can be advantageous in many calculations. I'm using it here as well as it will significantly simplify mathematical models used to find lane lines.  
 
-![](report/img_orig1.jpg)![](report/img_warped1.jpg)![](report/thresh_warped1.jpg)
+![](report/warp/img_orig1.jpg)![](report/warp/img_warped1.jpg)  
 
+
+### Lane detection 
+
+This pipeline node is responsible for choosing pixels that will belong to the lane lines, creating polynomial model of theses lines and creation of the Lane object that encopsulates both and add extra functionality such as line curvature calculation and car offset from the lane center.  
+
+Lane pixels can be chosen either from scratch or using prior lane models.  
+When looking for lane from scratch I first used histograms of the bottom part of the image to find initial bottom lane lines positions. It is done by finding two histogram peaks on left and right halfs of the image each. 
+
+![](report/lanes/histogram2.jpg)
+
+I used small windows around these initial positions to determine which pixels are close enough to it. If window covers enough masked pixels algorithm calculates new position for the windows drawn on top of the first ones. These process of sliding windows repeats until it reaches top of the image (in bird-eye view perspective).  
+
+![](report/lanes/windows2.jpg)
+
+Second approach takes advantage of the fact that lanes don't move much in adjacent frames. As such we can use prior lane line models to create area where new lines' pixels should be. All masked pixels that are covered by this area becomes part of the new Lane object.  
+
+Finally after finding left and right lines pixel locations we can fit polynomial of second degree (x = Ay^2 + By + C) to it, which will become our line models. 
+
+![](report/lanes/fitted_lines2.jpg)
 
 ------------------------DELETE-------------------------------------  
 The goals / steps of this project are the following:
