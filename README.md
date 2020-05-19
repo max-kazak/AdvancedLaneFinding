@@ -69,6 +69,18 @@ But due to changing conditions on the road (e.g. shadows) choosing colors in RGB
 
 ![](report/test_images/005.jpg)![](report/thresholding/color6.jpg) 
 
+
+### Cut ROI
+
+When looking for the lane we can make a rough guess where on the image it can be, we'll call it out region of interest (ROI). By eliminating all pixels outside of this region we can reduce processing time and reduce noise that can affect model calculation.  
+
+### Bird-view perspective  
+
+Bird-eye view persective (aka top view perspective) can be advantageous in many calculations. I'm using it here as well as it will significantly simplify mathematical models used to find lane lines.  
+
+![](report/img_orig1.jpg)![](report/img_warped1.jpg)![](report/thresh_warped1.jpg)
+
+
 ------------------------DELETE-------------------------------------  
 The goals / steps of this project are the following:
 
