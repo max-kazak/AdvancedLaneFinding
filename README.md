@@ -50,6 +50,16 @@ After calibration process images and video frames can be undistorted using calib
 
 ### Thresholding  
 
+To build the model of the lane it is first necessary to segment-out pixels that belong to the lane lines. In this project I'm using gradient and color thresholding to create binary masks of the line pixels.  
+
+#### Gradient thresholding  
+
+Image gradients show how fast pixel intensity is changing in vertical and horizontal directions. Thus it is possible to detect edges and lines on the images.  
+So to separate road lines I created binary mask that shows pixels which gradient magnitude and direction are within specified boundaries.  
+ ![](report/thresholding/grad2.png)
+ 
+ This method produces well defined lines that are easy to use for creating line models. But one of the big downsides of such approach is if intensity of the line is low compared to the road it's very difficult to discern it using gradients. 
+
 ------------------------DELETE-------------------------------------  
 The goals / steps of this project are the following:
 
