@@ -100,6 +100,23 @@ Finally after finding left and right lines pixel locations we can fit polynomial
 
 ![](report/lanes/fitted_lines2.jpg)
 
+### Lane Validation 
+
+Even after carefully tuning parameters it is still difficult to avoid problems in some in all video frames. Lane Validation node is responsible to finding bad Lane objects after the fact and dealing with such problems. 
+
+Lane validation is done by comparing two lane lines to each other and rejecting Lane object if say lines curve in different directions or if one line curves much sharper than the other. It also can compare new lane model to the model from the previous frame and again reject new model if it deviates from the prior one too much.  
+
+If new Lane object didn't pass the validation check one of the following happens: 
+
+ - prior Lane object is reused for current frame 
+ - lane is detected from scratch if detection failed too many times
+ 
+### Lane smoothing  
+
+Changes in lane model can be small enough to pass validation check but still cause ragged estimation when estimated lane rapidly changes position in adjacent frames. To avoid it mean of the several past models is used for further processing.  
+
+
+
 ------------------------DELETE-------------------------------------  
 The goals / steps of this project are the following:
 
