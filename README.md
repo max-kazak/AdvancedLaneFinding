@@ -3,7 +3,7 @@ Advanced Lane Finding
 
 In this project, I wrote a software pipeline that comprised of various Computer Vision techniques to identify the lane boundaries in a video as a prototype for autonomous car perception system responsible for lane navigation.
 
-[![Result Video](data/output_images/test2.jpg)](https://www.youtube.com/watch?v=IhAv3MpZY7k)
+[![Result Video](report/youtube_thumbnail.jpg)](https://www.youtube.com/watch?v=IhAv3MpZY7k)
 
 ## Project Structure
 
