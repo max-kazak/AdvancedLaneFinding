@@ -136,4 +136,4 @@ Changes in lane model can be small enough to pass validation check but still cau
 The final part of this project is to created augmented video with estimated lane projected on top of the road. 
 This is done by drawing a lane on the empty bird-eye view image and changing perspective of this image back to camera view one. Then lane image is combined with undistorted frame and text with Lane object information is added on top. 
 
-
+![](report/output_example.jpg)
