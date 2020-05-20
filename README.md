@@ -10,25 +10,25 @@ In this project, I wrote a software pipeline comprised of various Computer Visio
 Project has following directory structure:  
 
 **.**  
-**├── data**                 - folder with all data  
-**│   ├── camera_cal**       - camera calibration images    
-**│   ├── test_images**      - folder with raw test images  
-**│   ├── videos**           - folder with raw videos  
-**│   ├── output_images**    - here goes all processed test images  
-**│   └── output_videos**    - here goes all processed videos  
-**├── lanefinder**           - project's source code  
-**│   ├── calibration.py**   - module with camera calibration related code  
-**│   ├── detect.py**        - module with detection related code  
-**│   ├── exceptions.py**    - module with custom exceptions  
-**│   ├── paths.py**         - module with path constants  
-**│   ├── pipeline.py**      - module with pipline related code  
-**│   ├── processing.py**    - entry-point module that launches image/video processing  
-**│   ├── thresholding.py**  - module with image thresholding related code  
-**│   ├── transform.py**     - module with image transformation related code  
-**│   └── utils.py**         - module with common-purpose functionality code
-**├── report**               - folder with report images  
-**├── calibration.p**        - pickle file with saved calibration matrices  
-**└── requirements.txt**     - project library requirements  
+├── **data**                 - folder with all data  
+│   ├── **camera_cal**       - camera calibration images    
+│   ├── **test_images**      - folder with raw test images  
+│   ├── **videos**           - folder with raw videos  
+│   ├── **output_images**    - here goes all processed test images  
+│   └── **output_videos**    - here goes all processed videos  
+├── **lanefinder**           - project's source code  
+│   ├── **calibration.py**   - module with camera calibration related code  
+│   ├── **detect.py**        - module with detection related code  
+│   ├── **exceptions.py**    - module with custom exceptions  
+│   ├── **paths.py**         - module with path constants  
+│   ├── **pipeline.py**      - module with pipline related code  
+│   ├── **processing.py**    - entry-point module that launches image/video processing  
+│   ├── **thresholding.py**  - module with image thresholding related code  
+│   ├── **transform.py**     - module with image transformation related code  
+│   └── **utils.py**         - module with common-purpose functionality code
+├── **report**               - folder with report images  
+├── **calibration.p**        - pickle file with saved calibration matrices  
+└── **requirements.txt**     - project library requirements  
 
 ## Execution
 
