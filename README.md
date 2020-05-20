@@ -25,7 +25,7 @@ Project has following directory structure:
 │   ├── **processing.py**    - entry-point module that launches image/video processing  
 │   ├── **thresholding.py**  - module with image thresholding related code  
 │   ├── **transform.py**     - module with image transformation related code  
-│   └── **utils.py**         - module with common-purpose functionality code
+│   └── **utils.py**         - module with common-purpose functionality code  
 ├── **report**               - folder with report images  
 ├── **calibration.p**        - pickle file with saved calibration matrices  
 └── **requirements.txt**     - project library requirements  
