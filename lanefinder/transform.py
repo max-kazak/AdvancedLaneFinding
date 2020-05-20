@@ -1,3 +1,7 @@
+"""
+This module contains functions for transforming images.
+"""
+
 import os
 import logging
 
@@ -9,20 +13,24 @@ import utils
 
 log = logging.getLogger("lanefinder.transform")
 
-_src_top_mar = 535
-_scr_bottom_mar = 120 # 170
-_dst_top_mar = 453
-_dst_bottom_mar = 500
+_src_top_mar = 535  # spacing between sides of the image and top of the ROI on camera view
+_scr_bottom_mar = 120  # spacing between sides of the image and bottom of the ROI on camera view
+_dst_top_mar = 453  # spacing between sides of the image and top of the ROI on bird-eye view
+_dst_bottom_mar = 500  # spacing between sides of the image and bottom of the ROI on bird-eye view
+
+# points for the polynomial representing ROI on camera view
 WARP_SRC_PTS = [(_src_top_mar, 460),
                 (1280 - _src_top_mar, 460),
                 (1280 - _scr_bottom_mar, 690),
                 (_scr_bottom_mar, 690)]
+# points for the ROI on the bird-eye view perspective
 WARP_DST_PTS = [(_dst_top_mar, 0),
                 (1280 - _dst_top_mar, 0),
                 (1280 - _dst_bottom_mar, 720),
                 (_dst_bottom_mar, 720)]
-YM_PER_PX = 3 / 110
-XM_PER_PX = 3.7 / 217
+
+YM_PER_PX = 3 / 110  # coefficient to convert pixels to meters in y direction
+XM_PER_PX = 3.7 / 217  # coefficient to convert pixels to meters in x direction
 
 
 def grad_thresholding(img, thresh_abs_x=None, thresh_abs_y=None, thresh_mag=None, thresh_dir=None, kernel_size=3):
@@ -165,6 +173,13 @@ def calc_M(src, dst):
 
 
 def cut_roi(img, poligon_pts):
+    """
+    Remove pixels outside of ROI
+
+    :param img: original image
+    :param poligon_pts: polygon points defining ROI
+    :return: processed image with removed pixels
+    """
     is_binary = False
     if len(img.shape) == 2:
         is_binary = True

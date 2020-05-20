@@ -1,9 +1,12 @@
+"""
+This module contains functions to detect and estimate lane model with Lane object itself.
+"""
+
 import os
 import logging
 
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 
 import paths
 import utils
@@ -17,8 +20,21 @@ PRC_LINE_CURV_DIFF_THRESHOLD = 0.8
 
 
 class Lane:
+    """
+    Lane object encapsulates lane line models, line pixel locations and original binary lane mask.
+    """
 
-    def __init__(self, lane_fit, line_seg=None, lane_mask=None, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX, img_shape=(1280, 720)):
+    def __init__(self, lane_fit, line_seg=None, lane_mask=None, ym_per_px=YM_PER_PX, xm_per_px=XM_PER_PX,
+                 img_shape=(1280, 720)):
+        """
+
+        :param lane_fit: (lline_fit, rline_fit) - polynomial coefficents for left and right line models
+        :param line_seg: (leftx, lefty, rightx, righty) - left  and right line pixel locations
+        :param lane_mask: binary lane pixel mask
+        :param ym_per_px: meters per pixel in binary mask in y direction
+        :param xm_per_px: meters per pixel in binary mask in x direction
+        :param img_shape: shape of the image where Lane can be drawn on
+        """
         self.lane_fit = lane_fit
         self.line_seg = line_seg
         self.lane_mask = lane_mask
@@ -31,9 +47,19 @@ class Lane:
         self.offset = None
 
     def copy(self):
+        """
+        Create duplicate of this object.
+
+        :return: Lane object
+        """
         return Lane(self.lane_fit, self.line_seg, self.lane_mask)
 
     def plot_fitted_lane(self):
+        """
+        Create plot of the left and right lines on top of the binary mask.
+
+        :return: bgr image
+        """
         left_fit, right_fit = self.lane_fit
         if self.lane_mask is not None:
             out_img = utils.mask_to_3ch(self.lane_mask)
@@ -67,6 +93,11 @@ class Lane:
         return plt_img
 
     def draw_lane(self):
+        """
+        Draw lane area and its boundaries on empty canvas.
+
+        :return: bgr image
+        """
         left_fit, right_fit = self.lane_fit
 
         w, h = self.img_shape
@@ -97,6 +128,12 @@ class Lane:
         return lane_img
 
     def get_lcurvs(self):
+        """
+        Calculate curvature of the lines and save them in self.curvature field.
+        If curvature < 0 then it curves to the left otherwise to the right.
+
+        :return: (left_curv_m, right_curv_m) - left and right curvatures in meters
+        """
         if self.curvature is None:
             left_fit, right_fit = self.lane_fit
 
@@ -123,11 +160,22 @@ class Lane:
         return self.curvature
 
     def get_curv(self):
+        """
+        Calculate overall curvature of the lane.
+
+        :return: curv_m - lane curvature in meters
+        """
         curvature = self.get_lcurvs()
         curv_avg = (np.absolute(curvature[0]) + np.absolute(curvature[1])) / 2
         return curv_avg
 
     def get_offset(self):
+        """
+        Calculate offset of the car compared to center of the lane.
+        Assumes the camera is centered.
+
+        :return: offset_m - offset in meters
+        """
         if self.offset is None:
             left_fit, right_fit = self.lane_fit
 
@@ -146,6 +194,12 @@ class Lane:
         return self.offset
 
     def validate(self, prior_lane=None):
+        """
+        Validate lane model.
+
+        :param prior_lane: Lane object to which this object is compared to.
+        :return: True if object is fine, otherwise False
+        """
         lline_curv, rline_curv = self.get_lcurvs()
         if abs(lline_curv) > STRAIGHT_LINE_CURV_THRESHOLD \
                 or abs(rline_curv) > STRAIGHT_LINE_CURV_THRESHOLD:
@@ -177,7 +231,6 @@ class Lane:
                 return False
 
         return True
-
 
     def __str__(self):
         return "Lane {params}: left_curv({lcurv}m), right_curv({rcurv}m), offset({offset}m)".format(

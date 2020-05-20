@@ -1,3 +1,7 @@
+"""
+Entrypoint module that processes images and videos.
+"""
+
 import os
 import logging
 import collections
@@ -14,6 +18,12 @@ log = logging.getLogger("lanefinder.processing")
 
 
 def process_images(in_dir, out_dir):
+    """
+    Processes all images in the in_dir.
+
+    :param in_dir: input image directory
+    :param out_dir: output image directory
+    """
     pipeline = PipeLine('Lane perception', [
             CalibrationNode(input='img',
                             output='img'),
@@ -47,6 +57,12 @@ def process_images(in_dir, out_dir):
 
 
 def process_video(in_file, out_file):
+    """
+    Processes video.
+
+    :param in_file: path to the input video
+    :param out_file: path to the output video
+    """
     preproc_pipeline = PipeLine('Lane perception', [
         ColorCvtNode(input='img', mode=ColorCvtNode.RGB2BGR,
                      output='img'),
@@ -128,6 +144,9 @@ def _smooth_lane_fit(lanefits):
 
 
 def main():
+    """
+    Entrypoint function.
+    """
     process_images(paths.DIR_TEST_IMG, paths.DIR_OUTPUT_IMG)
     process_video(os.path.join(paths.DIR_VIDEOS, paths.FILE_VIDEO_1),
                   os.path.join(paths.DIR_OUTPUT_VIDEOS, paths.FILE_VIDEO_1))

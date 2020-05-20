@@ -1,3 +1,7 @@
+"""
+This module contains Pipeline class and Pipeline Node classes.
+"""
+
 import os
 import logging
 
@@ -15,12 +19,25 @@ log = logging.getLogger("lanefinder.pipeline")
 
 
 class PipeLine:
+    """
+    Class that is comprised of PipeNodes and runs them sequentially.
+    """
 
     def __init__(self, name, nodes):
+        """
+        :param name: pipeline name
+        :param nodes: list of PipeNodes
+        """
         self.name = name
         self.nodes = nodes
 
     def passthrough(self, context):
+        """
+        Pass context through pipeline nodes. Context contains both input parameters and intermediary results.
+
+        :param context: dict of input arguments
+        :return: last node results
+        """
         log.info("Running {} Pipeline::".format(self.name))
         last_result = None
         for node in self.nodes:
@@ -29,21 +46,44 @@ class PipeLine:
 
 
 class PipeNode:
+    """
+    Abstract class for all pipeline nodes.
+    """
 
     def process(self, context):
+        """
+        Entrypoint to run the node.
+
+        :param context: dict of input arguments
+        :return: results of execution
+        """
         log.info("Processing {}...".format(type(self).__name__))
         return self._action(context)
 
     def _action(self, context):
+        """
+        Override this method to implement custom node functionality.
+
+        :param context: dict of input arguments
+        :return:
+        """
         raise RuntimeError('Called abstract method PipeNode._action()')
 
 
 class ColorCvtNode(PipeNode):
+    """
+    Node that converts image from one color space to another.
+    """
 
     RGB2BGR = cv2.COLOR_RGB2BGR
     BGR2RGB = cv2.COLOR_BGR2RGB
 
     def __init__(self, input, output, mode):
+        """
+        :param input: name of the input image in context
+        :param output: name of the output image in context
+        :param mode: cv2 compliant mode, see cv2.cvtColor
+        """
         self.input = input
         self.output = output
         self.mode = mode
@@ -58,9 +98,18 @@ class ColorCvtNode(PipeNode):
 
 
 class CalibrationNode(PipeNode):
+    """
+    Undistort image using calibration matrices.
+    """
 
     def __init__(self, input, output,
                  calibration_folder=paths.DIR_CAMERA_CAL, persist_to_file='calibration.p'):
+        """
+        :param input: name of the input image in context
+        :param output: name of the output image in context
+        :param calibration_folder: (optional) path to directory with calibration images
+        :param persist_to_file: (optional) path to pickle file where calibration matrix is stored
+        """
         self.input = input
         self.output = output
         self.mtx, self.dist = calibration.get_calibration(calib_img_path=calibration_folder,
@@ -76,8 +125,15 @@ class CalibrationNode(PipeNode):
 
 
 class ThresholdingNode(PipeNode):
+    """
+    Calculate binary mask.
+    """
     
     def __init__(self, input, output):
+        """
+        :param input: name of the input image in context
+        :param output: name of the output binary mask in context
+        """
         self.input = input
         self.output = output
 
@@ -92,8 +148,16 @@ class ThresholdingNode(PipeNode):
 
 
 class GrayThresholdingNode(PipeNode):
+    """
+    Apply thresholding to the grayscale image.
+    """
 
     def __init__(self, gray_input, output, thresh):
+        """
+        :param gray_input: name of the input grayscale image in context
+        :param output: name of the output binary mask in context
+        :param thresh: threshold for pixel intensity
+        """
         self.input = gray_input
         self.output = output
         self.thresh = thresh
@@ -111,24 +175,41 @@ class GrayThresholdingNode(PipeNode):
 
 
 class CuttingNode(PipeNode):
+    """
+    Removes pixels in the image outside of ROI
+    """
     
-    def __init__(self, input, output):
+    def __init__(self, input, output, roi_pts=transform.WARP_SRC_PTS):
+        """
+        :param input: name of the input image in context
+        :param output: name of the output image in context
+        :param roi_pts: (optinal) points of the ROI polygon
+        """
         self.input = input
         self.output = output
+        self.roi_pts = roi_pts
 
     def _action(self, context):
         img = context.get(self.input)
         if img is None:
             raise exceptions.PipeException("missing context parameter: {}".format(self.input))
-        cut = transform.cut_roi(img, transform.WARP_SRC_PTS)
+        cut = transform.cut_roi(img, self.roi_pts)
         context[self.output] = cut
 
         return cut
 
 
 class OverlayRoiNode(PipeNode):
+    """
+    Draws ROI on the image.
+    """
 
     def __init__(self, input, output, roi_pts=transform.WARP_SRC_PTS):
+        """
+        :param input: name of the input image in context
+        :param output: name of the output image in context
+        :param roi_pts: (optional) points of the ROI polygon
+        """
         self.input = input
         self.output = output
         self.roi_pts = roi_pts
@@ -146,8 +227,17 @@ class OverlayRoiNode(PipeNode):
 
 
 class OverlayImagesNode(PipeNode):
+    """
+    Overlays one image on top the another
+    """
 
     def __init__(self, bckgrnd_input, overlay_input, output, alpha=0.5):
+        """
+        :param bckgrnd_input: name of the bottom image in context
+        :param overlay_input: name of the top image in context
+        :param output: name of the output image in context
+        :param alpha: (optional) transparency of the top image
+        """
         self.input1 = bckgrnd_input
         self.input2 = overlay_input
         self.alpha = alpha
@@ -168,8 +258,17 @@ class OverlayImagesNode(PipeNode):
 
 
 class PerspectiveNode(PipeNode):
+    """
+    Applies perspective transformation to the image.
+    """
 
     def __init__(self, input, output, inv=False, dtype=None):
+        """
+        :param input: name of the input image in context
+        :param output: name of the output image in context
+        :param inv: (default=False), inverse trasformation
+        :param dtype: (optional) type of the output image
+        """
         self.input = input
         self.output = output
         self.inv = inv
@@ -196,8 +295,16 @@ class PerspectiveNode(PipeNode):
 
 
 class LaneDetectionNode(PipeNode):
+    """
+    Detects Lane on the binary mask image.
+    """
 
-    def __init__(self, binary_input, prior_lane_input=None, output=None):
+    def __init__(self, binary_input, output, prior_lane_input=None):
+        """
+        :param binary_input: name of the binary input image in context
+        :param prior_lane_input: (optional) name of the prior Lane object in context
+        :param output: name of the output Lane object in context
+        """
         self.input = binary_input
         self.prior_lane_input = prior_lane_input
         self.output = output
@@ -217,12 +324,14 @@ class LaneDetectionNode(PipeNode):
 
 
 class DrawLaneNode(PipeNode):
+    """
+    Draw Lane representation.
+    """
 
     def __init__(self, lane_input, output, mode='fit'):
         """
-
-        :param lane_input:
-        :param output:
+        :param lane_input: name of the input Lane object in context
+        :param output: name of the output image in context
         :param mode: "fit" - draw fitted lines, "area" - draw lane area
         """
         self.input = lane_input
@@ -247,8 +356,16 @@ class DrawLaneNode(PipeNode):
 
 
 class AddTextNode(PipeNode):
+    """
+    Add Lane information text to the image.
+    """
 
     def __init__(self, lane_input, img_input, output):
+        """
+        :param lane_input: name of the input Lane object in context
+        :param img_input: name of the input image in context
+        :param output: name of the output image in context
+        """
         self.output = output
         self.img_input = img_input
         self.lane_input = lane_input

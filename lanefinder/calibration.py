@@ -1,3 +1,7 @@
+"""
+This module contains functions used to calculate calibration matrices and undistort images.
+"""
+
 import os
 import logging
 

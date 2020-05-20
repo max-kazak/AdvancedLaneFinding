@@ -1,3 +1,7 @@
+"""
+This module contains general application functions.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,6 +24,13 @@ def fig2data(fig):
 
 
 def plot_for_img(img):
+    """
+    Prepares matplotlib figure and plot the same size as the input image.
+    It's convenient when you want to put image in the figure and plot something on top of it.
+
+    :param img: input image
+    :return: fig, plot
+    """
     fig = plt.figure(figsize=(img.shape[1] / 100, img.shape[0] / 100))
     fig.patch.set_facecolor('black')
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)

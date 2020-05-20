@@ -1,3 +1,7 @@
+"""
+This module contains constants for key files and directories
+"""
+
 FILE_VIDEO_1 = 'project_video.mp4'
 FILE_VIDEO_2 = 'challenge_video.mp4'
 FILE_VIDEO_3 = 'harder_challenge_video.mp4'
